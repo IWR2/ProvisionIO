@@ -1,0 +1,33 @@
+{
+  "name": "provision-io",
+  "version": "1.0.0",
+  "description": "An Iaas management API for hardware resources.",
+  "homepage": "https://github.com/IWR2/ProvisionIO#readme",
+  "bugs": {
+    "url": "https://github.com/IWR2/ProvisionIO/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IWR2/ProvisionIO.git"
+  },
+  "license": "ISC",
+  "author": "IWR2",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo Tests not yet implemented",
+    "dev": "nodemon server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1057.0",
+    "@aws-sdk/lib-dynamodb": "^3.1057.0",
+    "axios": "^1.16.1",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-oauth2-jwt-bearer": "^1.9.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
