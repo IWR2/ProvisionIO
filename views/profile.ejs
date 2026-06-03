@@ -1,0 +1,59 @@
+<!-- profile.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+  <%- include('partials/head.ejs') %>
+  <body>
+    <%- include('partials/nav.ejs') %>
+    <main class="container">
+      <h1>User Details</h1>
+      <div class="card">
+        <p class="card-description">
+          Below are your profile details. Please copy your JWT to use the REST
+          API.
+        </p>
+
+        <div class="profile-details">
+          <div class="detail-item">
+            <span class="detail-label">User ID</span>
+            <span class="detail-value"><%= user.sub %></span>
+          </div>
+
+          <div class="detail-item">
+            <span class="detail-label">Email</span>
+            <span class="detail-value"><%= user.email %></span>
+          </div>
+
+          <div class="detail-item jwt-section">
+            <span class="detail-label">JWT Token</span>
+            <div class="jwt-container">
+              <pre id="jwt" class="jwt-content"><%= jwt %></pre>
+              <button type="button" class="btn btn-primary" id="copyJwtBtn">
+                Copy JWT
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      const copyJwtBtn = document.getElementById("copyJwtBtn");
+      if (copyJwtBtn) {
+        copyJwtBtn.addEventListener("click", function () {
+          const jwtElement = document.getElementById("jwt");
+          const jwtText = jwtElement.innerText;
+
+          navigator.clipboard
+            .writeText(jwtText)
+            .then(() => {
+              alert("JWT copied to clipboard!");
+            })
+            .catch((err) => {
+              console.error("Failed to copy: ", err);
+              alert("Failed to copy JWT. Please copy manually.");
+            });
+        });
+      }
+    </script>
+  </body>
+</html>
