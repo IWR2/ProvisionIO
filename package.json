@@ -24,8 +24,10 @@
     "@aws-sdk/lib-dynamodb": "^3.1057.0",
     "axios": "^1.16.1",
     "dotenv": "^17.4.2",
+    "ejs": "^6.0.1",
     "express": "^5.2.1",
-    "express-oauth2-jwt-bearer": "^1.9.0"
+    "express-oauth2-jwt-bearer": "^1.9.0",
+    "express-openid-connect": "^3.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
