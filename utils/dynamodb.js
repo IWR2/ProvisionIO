@@ -1,3 +1,5 @@
+// dynamodb.js
+
 /**
  * @file DynamoDB client configuration for the ProvisionIO API.
  *
