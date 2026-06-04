@@ -92,53 +92,33 @@ const checkJwt = jwtAuth({
  * This route displays different content based on whether the user is
  * authenticated with Auth0.
  *
- * - If authenticated: Shows a welcome message, a link to the profile page
- *   (where the user can copy their JWT for API testing), and a logout link.
- * - If not authenticated: Shows a login link that redirects to Auth0's
- *   Universal Login page.
+ * - If authenticated: Shows a welcome message, user metadata, and a link to
+ *   the profile page where the user can copy their JWT for API testing.
+ * - If not authenticated: Shows API description and a login link that
+ *   redirects to Auth0's Universal Login page.
  *
- * The user's name or email is displayed as a personal greeting.
+ * The route uses the home.ejs template, which renders a card with login
+ * metadata.
+ *
+ * @returns {void} Renders the home.ejs view with user data
  *
  * @example
  * // User is not logged in
- * // Response: HTML page with "Login with Auth0" link
+ * // GET Renders home.ejs showing API info and "Login with Auth0" button
  *
+ * @example
  * // User is logged in
- * // Response: HTML page with welcome message, profile link, and logout link
+ * // GET Renders home.ejs showing welcome message, user metadata, and
+ * // "Get Your JWT Token" button
  */
 app.get("/", (req, res) => {
   const isAuthenticated = req.oidc.isAuthenticated();
 
-  if (isAuthenticated) {
-    res.send(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>ProvisionIO</title>
-        <link rel="stylesheet" href="/styles.css">
-      </head>
-      <body>
-        <h1>Welcome, ${req.oidc.user.name || req.oidc.user.email}!</h1>
-        <p><a href="/profile">Get your JWT for Postman</a></p>
-        <p><a href="/logout">Logout</a></p>
-      </body>
-      </html>
-    `);
-  } else {
-    res.send(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>ProvisionIO</title>
-        <link rel="stylesheet" href="/styles.css">
-      </head>
-      <body>
-        <h1>ProvisionIO API</h1>
-        <p><a href="/login">Login with Auth0</a></p>
-      </body>
-      </html>
-    `);
-  }
+  res.render("home", {
+    title: "ProvisionIO API",
+    isAuthenticated: isAuthenticated,
+    user: isAuthenticated ? req.oidc.user : null,
+  });
 });
 
 /**
@@ -152,7 +132,7 @@ app.get("/", (req, res) => {
  * and used as a Bearer token in Postman to test protected API endpoints
  * (/protected endpoint).
  *
- * @returns {void} Renders the `profile.ejs` view with user data and access token
+ * @returns {void} Renders the profile.ejs view with user data and access token
  *
  * @example
  * // User is logged in via Auth0
@@ -164,7 +144,7 @@ app.get("/", (req, res) => {
 app.get("/profile", requiresAuth(), (req, res) => {
   const accessToken = req.oidc.accessToken?.access_token;
   console.log("Access Token for API:", accessToken);
-  console.log("User from oidc:", req.oidc.user); // ← ADD THIS DEBUG
+  console.log("User from oidc:", req.oidc.user);
   res.render("profile", {
     title: "Your JWT Token",
     user: req.oidc.user,
