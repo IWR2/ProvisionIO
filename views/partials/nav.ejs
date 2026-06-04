@@ -5,7 +5,9 @@
   </div>
   <div class="nav-links">
     <a href="/" class="nav-link">Home</a>
-    <a href="/profile" class="nav-link">Profile</a>
-    <a href="/logout" class="nav-link logout">Logout</a>
+    <% if (isAuthenticated) { %>
+      <a href="/profile" class="nav-link">Profile</a>
+      <a href="/logout" class="nav-link logout">Logout</a>
+    <% } %>
   </div>
 </nav>
