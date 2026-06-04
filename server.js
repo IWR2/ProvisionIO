@@ -97,18 +97,18 @@ const checkJwt = jwtAuth({
  * - If not authenticated: Shows API description and a login link that
  *   redirects to Auth0's Universal Login page.
  *
- * The route uses the home.ejs template, which renders a card with login
- * metadata.
+ * The isAuthenticated variable is passed to the template to control the
+ * display of navigation links (Profile/Logout) in the nav partial.
  *
  * @returns {void} Renders the home.ejs view with user data
  *
  * @example
  * // User is not logged in
- * // GET Renders home.ejs showing API info and "Login with Auth0" button
+ * // GET / Renders home.ejs showing API info and "Login with Auth0" button
  *
  * @example
  * // User is logged in
- * // GET Renders home.ejs showing welcome message, user metadata, and
+ * // GET / Renders home.ejs showing welcome message, user metadata, and
  * // "Get Your JWT Token" button
  */
 app.get("/", (req, res) => {
@@ -129,24 +129,27 @@ app.get("/", (req, res) => {
  * (req.oidc.accessToken?.access_token) and renders the profile.ejs view.
  *
  * The access token displayed on this page is a valid JWT that can be copied
- * and used as a Bearer token in Postman to test protected API endpoints
- * (/protected endpoint).
+ * and used as a Bearer token in Postman to test protected API endpoints.
+ *
+ * The isAuthenticated variable is passed to the template to control the
+ * display of navigation links (Profile/Logout) in the nav partial.
  *
  * @returns {void} Renders the profile.ejs view with user data and access token
  *
  * @example
  * // User is logged in via Auth0
- * // Response: Rendered HTML page displaying:
+ * // GET /profile renders HTML page displaying:
  * // - User ID (sub)
  * // - User email
  * // - Access token (JWT) with a "Copy JWT" button
  */
 app.get("/profile", requiresAuth(), (req, res) => {
   const accessToken = req.oidc.accessToken?.access_token;
-  console.log("Access Token for API:", accessToken);
-  console.log("User from oidc:", req.oidc.user);
+  const isAuthenticated = true;
+
   res.render("profile", {
     title: "Your JWT Token",
+    isAuthenticated: isAuthenticated,
     user: req.oidc.user,
     jwt: accessToken,
   });
