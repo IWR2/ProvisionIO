@@ -1,57 +1,83 @@
 <!-- profile.ejs -->
+
 <!DOCTYPE html>
 <html lang="en">
   <%- include('partials/head.ejs') %>
-  <body>
+  <body class="app-container">
     <%- include('partials/nav.ejs') %>
-    <main class="container">
-      <h1>User Details</h1>
-      <div class="card">
-        <p class="card-description">
-          Below are your profile details. Please copy your JWT to use the REST
-          API.
-        </p>
 
-        <div class="profile-details">
-          <div class="detail-item">
-            <span class="detail-label">User ID</span>
-            <span class="detail-value"><%= user.sub %></span>
-          </div>
+    <main class="app-main">
+      <div class="container">
+        <section class="card-container">
+          <header class="card-header">
+            <h3 class="card-title">User Profile</h3>
+          </header>
 
-          <div class="detail-item">
-            <span class="detail-label">Email</span>
-            <span class="detail-value"><%= user.email %></span>
-          </div>
+          <div class="card-content">
+            <div class="api-metadata">
+              <p class="profile-description">
+                Below are your profile details. Use your JWT to authenticate
+                with the REST API.
+              </p>
 
-          <div class="detail-item jwt-section">
-            <span class="detail-label">JWT Token</span>
-            <div class="jwt-container">
-              <pre id="jwt" class="jwt-content"><%= jwt %></pre>
-              <button type="button" class="btn btn-primary" id="copyJwtBtn">
-                Copy JWT
-              </button>
+              <div class="api-metadata__item">
+                <span class="api-metadata__label">User ID</span>
+                <span class="api-metadata__value api-metadata__value--mono"
+                  ><%= user.sub %></span
+                >
+              </div>
+
+              <div class="api-metadata__item">
+                <span class="api-metadata__label">Email</span>
+                <span class="api-metadata__value"><%= user.email %></span>
+              </div>
+
+              <div class="api-metadata__item jwt-section">
+                <span class="api-metadata__label">JWT Token</span>
+                <div class="jwt-container">
+                  <pre id="jwt" class="jwt-pre"><%= jwt %></pre>
+                  <button
+                    type="button"
+                    class="btn btn-primary copy-jwt-btn"
+                    id="copyJwtBtn"
+                  >
+                    Copy JWT
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </main>
+
+    <footer class="app-footer">
+      <div class="api-info">
+        <div class="api-info__item">
+          <span class="api-info__label">API Version</span>
+          <span class="api-info__value">1.0.0</span>
+        </div>
+        <div class="api-info__item">
+          <span class="api-info__label">Docs</span>
+          <span class="api-info__value"
+            ><a href="https://github.com/IWR2/ProvisionIO">GitHub</a></span
+          >
+        </div>
+      </div>
+    </footer>
 
     <script>
       const copyJwtBtn = document.getElementById("copyJwtBtn");
       if (copyJwtBtn) {
         copyJwtBtn.addEventListener("click", function () {
-          const jwtElement = document.getElementById("jwt");
-          const jwtText = jwtElement.innerText;
-
-          navigator.clipboard
-            .writeText(jwtText)
-            .then(() => {
-              alert("JWT copied to clipboard!");
-            })
-            .catch((err) => {
-              console.error("Failed to copy: ", err);
-              alert("Failed to copy JWT. Please copy manually.");
-            });
+          const jwtText = document.getElementById("jwt").innerText;
+          navigator.clipboard.writeText(jwtText).then(() => {
+            const originalText = copyJwtBtn.innerText;
+            copyJwtBtn.innerText = "Copied!";
+            setTimeout(() => {
+              copyJwtBtn.innerText = originalText;
+            }, 2000);
+          });
         });
       }
     </script>
