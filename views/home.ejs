@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <%- include('partials/head.ejs') %>
+  <body class="app-container">
+    <%- include('partials/nav.ejs') %>
+    
+    <main class="app-main">
+      <div class="container">
+        <section class="card-container welcome-card">
+          <header class="card-header">
+            <h3 class="card-title"><%= isAuthenticated ? `Welcome, ${user.name || user.email}!` : 'ProvisionIO API' %></h3>
+          </header>
+          
+          <div class="card-content">
+            <div class="api-metadata">
+              <% if (isAuthenticated) { %>
+                <div class="api-metadata__item">
+                  <span class="api-metadata__label">Status</span>
+                  <span class="api-metadata__value">Authenticated</span>
+                </div>
+                
+                <div class="api-metadata__item">
+                  <span class="api-metadata__label">User ID</span>
+                  <span class="api-metadata__value api-metadata__value--mono"><%= user.sub %></span>
+                </div>
+                
+                <div class="api-metadata__item">
+                  <span class="api-metadata__label">Email</span>
+                  <span class="api-metadata__value"><%= user.email %></span>
+                </div>
+                
+                <div class="api-metadata__actions">
+                  <a href="/profile" class="btn btn-primary">Get Your JWT Token</a>
+                  <a href="/logout" class="btn btn-secondary">Logout</a>
+                </div>
+              <% } else { %>
+                <div class="api-metadata__item">
+                  <span class="api-metadata__label">Status</span>
+                  <span class="api-metadata__value">Not Authenticated</span>
+                </div>
+                
+                <div class="api-metadata__item">
+                  <span class="api-metadata__label">Description</span>
+                  <span class="api-metadata__value">Infrastructure as a Service Management API</span>
+                </div>
+                
+                <div class="api-metadata__item">
+                  <span class="api-metadata__label">Endpoints</span>
+                  <span class="api-metadata__value">/clients, /services, /users</span>
+                </div>
+                
+                <div class="api-metadata__actions">
+                  <a href="/login" class="btn btn-primary">Login with Auth0</a>
+                </div>
+              <% } %>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+    
+    <footer class="app-footer">
+      <div class="api-info">
+        <div class="api-info__item">
+          <span class="api-info__label">API Version</span>
+          <span class="api-info__value">1.0.0</span>
+        </div>
+        <div class="api-info__item">
+          <span class="api-info__label">Docs</span>
+          <span class="api-info__value"><a href="https://github.com/IWR2/ProvisionIO">GitHub</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
