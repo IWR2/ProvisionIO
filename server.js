@@ -17,14 +17,13 @@
 import "dotenv/config";
 import express from "express";
 /** * Auth0 SDK Imports
- * We use 'pkg' and 'pkg2' aliases because these Auth0 libraries are
+ * We use "pkg" aliases because these Auth0 libraries are
  * CommonJS modules. Using an alias allows us to import the default
- * export and then destructure the specific methods (like 'auth') we need.
+ * export and then destructure the specific methods (like "auth") we need.
  */
 import pkg from "express-openid-connect";
-const { auth: webAuth, requiresAuth } = pkg;
-import pkg2 from "express-oauth2-jwt-bearer";
-const { auth: jwtAuth } = pkg2;
+import usersRoutes from "./routes/usersRoutes.js";
+import { checkJwt } from "./services/auth.js";
 
 import {
   CreateTableCommand,
@@ -33,6 +32,7 @@ import {
 
 import { client, TABLE_NAME } from "./utils/dynamodb.js";
 
+const { auth: webAuth, requiresAuth } = pkg;
 const app = express();
 app.set("view engine", "ejs");
 app.use(express.static("public"));
@@ -67,24 +67,6 @@ const config = {
 
 // Apply web auth middleware (adds /login, /logout, /callback routes)
 app.use(webAuth(config));
-
-/**
- * JWT Validation Middleware
- *
- * This middleware validates access tokens for protected API endpoints.
- * It checks the token's signature, audience (aud), issuer (iss), and expiration.
- *
- * The token must be an access_token with the correct audience matching
- * AUTH0_AUDIENCE. This is the token displayed on "/profile"
- * after the user logs in.
- *
- * After validation, the decoded token payload is available at "req.auth.payload".
- */
-const checkJwt = jwtAuth({
-  issuerBaseURL: `https://${process.env.AUTH0_DOMAIN}/`,
-  audience: process.env.AUTH0_AUDIENCE,
-  tokenSigningAlg: "RS256",
-});
 
 /**
  * Landing page for the ProvisionIO API.
@@ -250,9 +232,9 @@ app.delete("/init", async (req, res) => {
 });
 
 /**
- * TODO: GET /users
  * Retrieves all registered users.
  */
+app.use("/users", usersRoutes);
 
 /**
  * TODO: POST /clients
