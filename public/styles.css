@@ -1,0 +1,444 @@
+/* styles.css */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--sans);
+  background-color: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Layout */
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-main {
+  flex: 1;
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.container {
+  width: 100%;
+  max-width: 600px;
+}
+
+/* Navigation Bar */
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.navbar-title {
+  color: var(--text-h);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.nav-links {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.nav-link {
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+}
+
+.nav-link:hover {
+  color: var(--accent);
+}
+
+/* Cards */
+
+.card-container {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 1.5rem 1.5rem 0 1.5rem;
+}
+
+.card-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.card-content {
+  padding: 1.5rem;
+}
+
+/* Metadata List */
+
+.api-metadata {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.api-metadata__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.api-metadata__label {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.api-metadata__value {
+  color: var(--text-h);
+  text-align: right;
+  word-break: break-word;
+}
+
+.api-metadata__value--mono {
+  font-family: var(--mono);
+  color: var(--accent);
+  font-size: 0.85rem;
+}
+
+.jwt-section {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  border-bottom: none;
+}
+
+
+.profile-description {
+  margin-bottom: 1.5rem;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+/* JWT Container */
+
+.jwt-container {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  padding: 1rem;
+  border-radius: 8px;
+  width: 100%;
+}
+
+.jwt-pre {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin-bottom: 1rem;
+  background: var(--bg);
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  color: var(--text);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Buttons */
+
+.api-metadata__actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.btn {
+  padding: 0.6rem 1.2rem;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-primary {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+}
+
+.btn-primary:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.btn-secondary {
+  background: var(--border);
+  color: var(--text-h);
+  border: 1px solid var(--border);
+}
+
+.copy-jwt-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Footer */
+
+.app-footer {
+  padding: 2rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: center;
+}
+
+.api-info {
+  display: flex;
+  gap: 2rem;
+  font-size: 0.8rem;
+}
+
+.api-info__label {
+  margin-right: 0.5rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.api-info__value a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.api-info__value a:hover {
+  text-decoration: underline;
+}
+
+/* ============================================
+   Responsive Styles
+   ============================================ */
+
+/* ============================================
+   Responsive Styles (Enhanced)
+   ============================================ */
+
+/* Mobile devices (up to 600px) */
+@media screen and (max-width: 600px) {
+  .app-main {
+    padding: 1rem;
+  }
+  
+  .container {
+    max-width: 100%;
+  }
+  
+  .card-header {
+    padding: 1rem;
+  }
+  
+  .card-title {
+    font-size: 1.25rem;
+  }
+  
+  .card-content {
+    padding: 1rem;
+  }
+  
+  .jwt-pre {
+    font-size: 0.7rem;
+    max-height: 200px;
+  }
+  
+  .api-info {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .api-metadata__item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  
+  .api-metadata__value {
+    text-align: left;
+  }
+  
+  .api-metadata__actions {
+    flex-direction: column;
+  }
+  
+  .nav-links {
+    gap: 1rem;
+  }
+  
+  .navbar {
+    padding: 0.75rem 1rem;
+  }
+  
+  /* Adjust card container for mobile */
+  .card-container {
+    margin-bottom: 1rem;
+  }
+}
+
+/* Landscape mode for mobile (like your other project) */
+@media screen and (orientation: landscape) and (max-height: 500px) {
+  body {
+    padding: 0;
+  }
+  
+  .app-main {
+    padding: 0.5rem;
+    padding-top: 0;
+  }
+  
+  .container {
+    max-width: 100%;
+  }
+  
+  /* Reduce card padding for landscape */
+  .card-header {
+    padding: 0.5rem 1rem;
+  }
+  
+  .card-title {
+    font-size: 1rem;
+    margin-bottom: 0;
+  }
+  
+  .card-content {
+    padding: 0.75rem 1rem;
+  }
+  
+  /* Adjust JWT display for landscape */
+  .jwt-pre {
+    max-height: 150px;
+    font-size: 0.65rem;
+  }
+  
+  /* Reduce footer padding */
+  .app-footer {
+    padding: 0.5rem;
+  }
+  
+  .api-info {
+    gap: 1rem;
+    font-size: 0.7rem;
+  }
+  
+  /* Navbar adjustments for landscape */
+  .navbar {
+    padding: 0.5rem 1rem;
+  }
+  
+  .navbar-title {
+    font-size: 1rem;
+  }
+  
+  .nav-link {
+    font-size: 0.8rem;
+  }
+}
+
+/* Medium screens (tablets) */
+@media screen and (min-width: 601px) and (max-width: 1024px) {
+  .container {
+    max-width: 90%;
+  }
+  
+  .card-header {
+    padding: 1.25rem;
+  }
+  
+  .card-content {
+    padding: 1.25rem;
+  }
+}
+
+/* Large screens (desktops) */
+@media screen and (min-width: 1025px) {
+  .container {
+    max-width: 700px;
+  }
+}
+
+/* Ensure cards have proper spacing on all devices */
+.card-container {
+  margin-bottom: 1.5rem;
+}
+
+/* For very tall screens, adjust JWT container */
+@media screen and (min-height: 900px) {
+  .jwt-pre {
+    max-height: 400px;
+  }
+}
+
+/* For very short screens (like Chromebooks), adjust spacing */
+@media screen and (max-height: 600px) {
+  .app-main {
+    padding: 1rem;
+  }
+  
+  .card-header {
+    padding: 0.75rem 1rem;
+  }
+  
+  .card-content {
+    padding: 0.75rem 1rem;
+  }
+  
+  .app-footer {
+    padding: 0.75rem;
+  }
+  
+  .jwt-pre {
+    max-height: 120px;
+  }
+}
+
+/* Dark mode support (respects system preference) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Your dark mode variables are already defined */
+  }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
