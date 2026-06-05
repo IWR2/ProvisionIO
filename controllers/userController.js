@@ -50,10 +50,10 @@ const management = new ManagementClient({
  * }
  *
  * // Response (403 Forbidden)
- * { "error": "Admin access required" }
+ * { "Error": "Admin access required" }
  *
  * // Response (406 Not Acceptable)
- * { "error": "Client must accept application/json" }
+ * { "Error": "Client must accept application/json" }
  */
 export const getAllUsers = async (req, res) => {
   // 406 Check Accept header
@@ -61,13 +61,13 @@ export const getAllUsers = async (req, res) => {
   if (!accepts) {
     return res
       .status(406)
-      .json({ error: "Client must accept application/json" });
+      .json({ Error: "Client must accept application/json" });
   }
 
   // Check admin permission
   const permissions = req.auth.payload?.permissions || [];
   if (!permissions.includes("read:users")) {
-    return res.status(403).json({ error: "Admin access required" });
+    return res.status(403).json({ Error: "Admin access required" });
   }
 
   try {
@@ -79,12 +79,11 @@ export const getAllUsers = async (req, res) => {
 
     const results = users.map((user) => ({
       id: user.user_id,
-      subject: user.user_id, // TODO: Get application-specific ID from DynamoDB later
     }));
 
     res.status(200).json({ results });
   } catch (error) {
     console.error("Error fetching users from Auth0:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ Error: "Internal server error" });
   }
 };
