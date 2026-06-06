@@ -14,11 +14,14 @@ import {
 import { client, TABLE_NAME } from "../utils/dynamodb.js";
 
 /**
- * POST /init - Creates the DynamoDB table.
+ * POST /init - Creates the DynamoDB table and its index.
  * Should be called ONCE before using any other endpoints.
  *
  * Table uses single-table design with PK (Partition Key) and SK (Sort Key).
- *
+ * @source: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/getting-started-step-1.html
+ * https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GSI.html#GSI.scenario
+ * https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GSI.html#GSI.Projections
+ * https://youtu.be/BkEu7zBWge8
  * @returns {Object} JSON message indicating table creation status.
  * @returns {Number} 200 - Table created successfully or already exists.
  * @returns {Number} 400 - Invalid table configuration (wrong key schema).
@@ -29,13 +32,33 @@ export const createTable = async (req, res) => {
     // Create the table
     const command = new CreateTableCommand({
       TableName: TABLE_NAME,
+      // Every item in our database needs two identifiers to be found:
+      // ResourceId: The unique "File Name" ("SERVICE#123" or "CATALOG")
+      // Category: The "Folder Name" or group label ("METADATA" or "SERVICE_COUNT")
       AttributeDefinitions: [
-        { AttributeName: "PK", AttributeType: "S" },
-        { AttributeName: "SK", AttributeType: "S" },
+        { AttributeName: "ResourceId", AttributeType: "S" },
+        { AttributeName: "Category", AttributeType: "S" },
       ],
       KeySchema: [
-        { AttributeName: "PK", KeyType: "HASH" },
-        { AttributeName: "SK", KeyType: "RANGE" },
+        { AttributeName: "ResourceId", KeyType: "HASH" },
+        { AttributeName: "Category", KeyType: "RANGE" },
+      ],
+      // Global Secondary Index (GSI):
+      // By default, you can only find items if you know their exact "File Name" (ResourceId).
+      // We create this index to "flip" the lookup: it acts like a library card catalog
+      // where we look up files by their "Folder Name" (Category) first
+      // This allows us to list all items within a Category without knowing their IDs
+      GlobalSecondaryIndexes: [
+        {
+          IndexName: "ServicesByCategoryIndex",
+          KeySchema: [
+            { AttributeName: "Category", KeyType: "HASH" },
+            { AttributeName: "ResourceId", KeyType: "RANGE" },
+          ],
+          Projection: {
+            ProjectionType: "ALL", // Ensures all data is available in the index
+          },
+        },
       ],
       BillingMode: "PAY_PER_REQUEST",
     });
