@@ -11,6 +11,7 @@
 
 import "dotenv/config";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 
 /**
  * DynamoDB client instance.
@@ -29,6 +30,16 @@ const client = new DynamoDBClient({
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   },
 });
+
+/**
+ * DynamoDB Document Client - Wrapper for easier data operations.
+ *
+ * Automatically converts between plain JavaScript objects and DynamoDB's
+ * native attribute value format.
+ *
+ * @type {DynamoDBDocumentClient}
+ */
+export const docClient = DynamoDBDocumentClient.from(client);
 
 /**
  * DynamoDB table name for the ProvisionIO application.
