@@ -22,15 +22,10 @@ import express from "express";
  * export and then destructure the specific methods (like "auth") we need.
  */
 import pkg from "express-openid-connect";
+import adminRoutes from "./routes/adminRoutes.js";
+import serviceRoutes from "./routes/serviceRoutes.js";
 import usersRoutes from "./routes/usersRoutes.js";
 import { checkJwt } from "./services/auth.js";
-
-import {
-  CreateTableCommand,
-  DeleteTableCommand,
-} from "@aws-sdk/client-dynamodb";
-
-import { client, TABLE_NAME } from "./utils/dynamodb.js";
 
 const { auth: webAuth, requiresAuth } = pkg;
 const app = express();
@@ -67,6 +62,7 @@ const config = {
 
 // Apply web auth middleware (adds /login, /logout, /callback routes)
 app.use(webAuth(config));
+app.use(express.json());
 
 /**
  * Landing page for the ProvisionIO API.
@@ -152,84 +148,7 @@ app.get("/protected", checkJwt, (req, res) => {
   });
 });
 
-/**
- * Creates the DynamoDB table for the application.
- * Should be called ONCE before using any other endpoints.
- *
- * Table uses single-table design with PK (Partition Key) and SK (Sort Key).
- *
- * @returns {Object} JSON message indicating table creation status.
- * @returns {Number} 200 - Table created successfully or already exists.
- * @returns {Number} 400 - Invalid table configuration (wrong key schema).
- * @returns {Number} 500 - Unexpected server error.
- */
-app.post("/init", async (req, res) => {
-  try {
-    const command = new CreateTableCommand({
-      TableName: TABLE_NAME,
-      AttributeDefinitions: [
-        { AttributeName: "PK", AttributeType: "S" }, // Partition Key
-        { AttributeName: "SK", AttributeType: "S" }, // Sort Key
-      ],
-      KeySchema: [
-        { AttributeName: "PK", KeyType: "HASH" },
-        { AttributeName: "SK", KeyType: "RANGE" },
-      ],
-      BillingMode: "PAY_PER_REQUEST",
-    });
-    // Send the command to DynamoDB create the table
-    await client.send(command);
-    console.log(`Table ${TABLE_NAME} created successfully`);
-    res.json({ message: `${TABLE_NAME} created successfully` });
-  } catch (error) {
-    // Handle table already exists
-    if (error.name === "ResourceInUseException") {
-      console.log(`Table ${TABLE_NAME} already exists`);
-      res.json({ message: `${TABLE_NAME} already exists` });
-      // Handle validation errors (e.g., schema mismatch, missing required parameters)
-    } else if (error.name === "ValidationException") {
-      console.error(`Validation error: ${error.message}`);
-      res.status(400).json({
-        error:
-          "Invalid table configuration. Check AttributeDefinitions and KeySchema.",
-        details: error.message,
-      });
-      // Handle any other unexpected errors
-    } else {
-      console.error(`Unexpected error: ${error.message}`);
-      res.status(500).json({ error: error.message });
-    }
-  }
-});
-
-/**
- * Permanently deletes the DynamoDB table and ALL its data.
- * Use with caution. This action cannot be undone.
- *
- * @returns {Object} JSON message indicating deletion status.
- * @returns {Number} 200 - Table deleted successfully.
- * @returns {Number} 404 - Table does not exist.
- * @returns {Number} 500 - Unexpected server error.
- */
-app.delete("/init", async (req, res) => {
-  try {
-    const command = new DeleteTableCommand({
-      TableName: TABLE_NAME,
-    });
-    await client.send(command);
-    console.log(`Table ${TABLE_NAME} deleted successfully`);
-    res.json({ message: `${TABLE_NAME} deleted successfully` });
-  } catch (error) {
-    if (error.name === "ResourceNotFoundException") {
-      console.log(`Table ${TABLE_NAME} does not exist`);
-      res.status(404).json({ message: "Table does not exist" });
-    } else {
-      console.error(error);
-      console.error(`Error deleting table: ${error.message}`);
-      res.status(500).json({ error: error.message });
-    }
-  }
-});
+app.use("/", adminRoutes); // /init endpoints (admin)
 
 /**
  * Retrieves all registered users.
@@ -270,6 +189,7 @@ app.use("/users", usersRoutes);
  * TODO: POST /services
  * Creates a new service (cloud infrastructure product).
  */
+app.use("/services", serviceRoutes);
 
 /**
  * TODO: GET /services
