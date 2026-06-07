@@ -14,6 +14,7 @@ import {
   GetCommand,
   QueryCommand,
   TransactWriteCommand,
+  UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "../utils/dynamodb.js";
 
@@ -291,3 +292,153 @@ export const getAllServices = async (req, res) => {
     res.status(500).json({ Error: "Internal server error" });
   }
 };
+
+/**
+ * PATCH /services/:id - Partially updates an existing service record.
+ *
+ * Constructs a DynamoDB UpdateCommand to modify only the
+ * valid fields provided in the request body for a service.
+ *
+ * @source: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.UpdateExpressions.html
+ * https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ExpressionAttributeNames.html
+ * https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ExpressionAttributeValues.html
+ * https://github.com/awsdocs/aws-doc-sdk-examples/blob/main/javascriptv3/example_code/dynamodb/scenarios/basic.js
+ * @param {Object} req - Express request object containing 'id' in params and updates in 'body'
+ * @returns {Object} 200 - Successful update with the modified service object.
+ * @returns {Object} 400 - Bad Request: Unsupported attributes, empty body, or invalid data types.
+ * @returns {Object} 403 - Forbidden: Attempts to modify immutable fields (id, clientId).
+ * @returns {Object} 404 - Not Found: The specified service_id does not exist.
+ * @returns {Object} 406 - Not Acceptable: Incorrect Accept header.
+ * @returns {Object} 415 - Unsupported Media Type: Incorrect Content-Type header.
+ * @returns {Object} 500 - Internal Server Error: Database failure or unexpected exception.
+ */
+export const updateAService = async (req, res) => {
+  // 415: Check Content-Type
+  if (req.get("content-type") !== "application/json") {
+    return res
+      .status(415)
+      .json({ Error: "Server only accepts application/json data" });
+  }
+
+  // 406: Check Accept header
+  const accepts = req.accepts(["application/json"]);
+  if (!accepts) {
+    return res
+      .status(406)
+      .json({ Error: "Client must accept application/json" });
+  }
+
+  const serviceId = req.params.id;
+  const bodyKeys = Object.keys(req.body);
+  const allowedUpdates = ["name", "type", "price"];
+
+  // 403: Prevent modifying serviceId and clientId
+  if (bodyKeys.includes("id")) {
+    return res.status(403).json({ Error: "serviceId cannot be modified" });
+  }
+
+  if (bodyKeys.includes("clientId")) {
+    return res.status(403).json({ Error: "clientId cannot be modified" });
+  }
+
+  // 400: Check for unsupported attributes
+  const unsupported = bodyKeys.filter((key) => !allowedUpdates.includes(key));
+  if (unsupported.length > 0) {
+    return res.status(400).json({
+      Error: `The request object includes unsupported attributes: ${unsupported.join(", ")}`,
+    });
+  }
+
+  // 400: Check for optional allowed attributes
+  if (bodyKeys.length === 0) {
+    return res.status(400).json({
+      Error: `The request must include at least one valid attribute: ${allowedUpdates.join(", ")}`,
+    });
+  }
+
+  // 400: Ensure the price is a valid number
+  if (
+    req.body.price !== undefined &&
+    (typeof req.body.price !== "number" || req.body.price < 0)
+  ) {
+    return res
+      .status(400)
+      .json({ Error: "The price attribute must be a non-negative number" });
+  }
+
+  try {
+    // Maps #placeholders to field names ("#fName" -> "name")
+    const expressionAttributes = {};
+    // Maps :placeholders to the new values (":name" -> "Chillflix")
+    const expressionValues = {};
+
+    // Set updatedAt timestamp so we know when the change happened
+    let updateExpression = "SET updatedAt = :now";
+    expressionValues[":now"] = new Date().toISOString();
+
+    // Look at every key the user sent in their request body.
+    bodyKeys.forEach((key) => {
+      // Add a key from the request body
+      // "SET updatedAt = :now, #fName = :Name, #fPrice = :Price"
+      updateExpression += `, #f${key} = :${key}`;
+
+      // Using a # prefix bypasses these DynamoDB's reserved word ("TYPE" or "DATE") restrictions
+      expressionAttributes[`#f${key}`] = key;
+
+      // ExpressionAttributeValues prevents NoSQL injection by binding
+      // user data to placeholders (:) instead of pasting it directly
+      expressionValues[`:${key}`] = req.body[key];
+    });
+
+    const updateCommand = new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { ResourceId: `SERVICE#${serviceId}`, Category: "METADATA" },
+      UpdateExpression: updateExpression, // Instruction expression
+      ExpressionAttributeNames: expressionAttributes, // Dictionary to translate # placeholders
+      ExpressionAttributeValues: expressionValues, // Dictionary to translate : placeholders
+
+      // ConditionExpression command only runs if the ResourceId already exists in the table
+      // If the ID is missing, the update fails to prevent creating data by accident
+      ConditionExpression: "attribute_exists(ResourceId)",
+
+      // ReturnValues tells the database to give us back the full object
+      // as it looks after the update is complete
+      ReturnValues: "ALL_NEW",
+    });
+    const updateResponse = await docClient.send(updateCommand);
+
+    // Access the attributes correctly
+    const updated = updateResponse.Attributes;
+
+    // 200: Successful Patch Return the newly modified service
+    res.status(200).json({
+      id: updated.ResourceId.replace("SERVICE#", ""),
+      name: updated.name,
+      type: updated.type,
+      price: updated.price,
+      client: updated.clientId,
+      self: `${req.protocol}://${req.get("host")}/services/${serviceId}`,
+    });
+  } catch (error) {
+    // 404: Condition check failed because the ResourceId does not exist
+    if (error.name === "ConditionalCheckFailedException") {
+      return res
+        .status(404)
+        .json({ Error: "No service with this service_id exists" });
+    }
+
+    // 400: Database rejected the update parameters (e.g., malformed schema)
+    if (error.name === "ValidationException") {
+      return res
+        .status(400)
+        .json({ Error: "Invalid request parameters provided to database" });
+    }
+
+    // 500: Unexpected errors (e.g., connectivity, DynamoDB service issues)
+    console.error("CRITICAL DB ERROR:", error);
+    res.status(500).json({ Error: "Internal server error" });
+  }
+};
+
+// TODO: Create DELETE A SERVICE
+export const deleteAService = async (req, res) => {};
