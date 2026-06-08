@@ -10,6 +10,7 @@ import {
   getAService,
   getAllServices,
   updateAService,
+  deleteAService,
 } from "../controllers/serviceController.js";
 
 const router = express.Router();
@@ -21,6 +22,7 @@ router.get("/:id", getAService);
 router.get("/", getAllServices);
 
 router.patch("/:id", updateAService);
+router.delete("/:id", deleteAService);
 
 // Method Not Allowed handlers (for root path only)
 router.put("/", (req, res) => {
