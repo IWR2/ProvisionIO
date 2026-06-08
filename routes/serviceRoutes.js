@@ -7,10 +7,10 @@
 import express from "express";
 import {
   createService,
-  getAService,
-  getAllServices,
-  updateAService,
-  deleteAService,
+  fetchServiceById,
+  getPaginatedServices,
+  updateService,
+  removeService,
 } from "../controllers/serviceController.js";
 
 const router = express.Router();
@@ -18,11 +18,11 @@ const router = express.Router();
 // Service CRUD operations
 router.post("/", createService);
 
-router.get("/:id", getAService);
-router.get("/", getAllServices);
+router.get("/:id", fetchServiceById);
+router.get("/", getPaginatedServices);
 
-router.patch("/:id", updateAService);
-router.delete("/:id", deleteAService);
+router.patch("/:id", updateService);
+router.delete("/:id", removeService);
 
 // Method Not Allowed handlers (for root path only)
 router.put("/", (req, res) => {
