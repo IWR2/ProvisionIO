@@ -210,6 +210,18 @@ Expected response:
 }
 ```
 
+### 10. Delete DynamoDB Table (Cleanup)
+Warning: This permanently deletes the table and ALL data (services, clients, users). This action cannot be undone.
+
+Using Postman (Recommended):
+```bash
+Field	Value
+Method	DELETE
+URL	http://localhost:3000/init
+Body	None needed
+```
+
+
 ### Stopping Services
 
 Stop the API server:
