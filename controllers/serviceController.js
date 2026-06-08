@@ -1,3 +1,5 @@
+// controllers/serviceController.js
+
 /**
  * Service Controller - Handles service create, read, update, and
  * delete operations.
@@ -10,14 +12,12 @@
 
 import { randomUUID } from "crypto";
 import {
-  PutCommand,
-  GetCommand,
-  QueryCommand,
-  TransactWriteCommand,
-  UpdateCommand,
-  DeleteCommand,
-} from "@aws-sdk/lib-dynamodb";
-import { docClient, TABLE_NAME } from "../utils/dynamodb.js";
+  postService,
+  getService,
+  getServices,
+  putService,
+  deleteService,
+} from "../models/serviceAws.js";
 
 /**
  * POST /services - Creates a new service and updates global service count.
@@ -99,34 +99,7 @@ export const createService = async (req, res) => {
     // Write the service to DynamoDB table
     // Use a TransactWriteCommand for two actions
     // (create service + update count)
-    await docClient.send(
-      new TransactWriteCommand({
-        TransactItems: [
-          // Create the new service
-          { Put: { TableName: TABLE_NAME, Item: service } },
-          // Increment the stats counter
-          // Instead of counting every service one by one, we keep a count at:
-          // (EntityId: "METRICS", EntityType: "SERVICE_COUNT").
-          {
-            Update: {
-              TableName: TABLE_NAME,
-              // We target a stats record to keep our total count
-              Key: { EntityId: "METRICS", EntityType: "SERVICE_COUNT" },
-              // "ADD" tells DynamoDB to perform the math internally,
-              // ensuring no data conflicts even if many services are created at once
-              // So we add 1 to our count: "Add 1 to the count attribute"
-              UpdateExpression: "ADD #c :inc",
-              // We use '#c' as an alias for "count" to avoid issues with
-              // DynamoDB's reserved system keywords
-              ExpressionAttributeNames: { "#c": "count" },
-              // We use "":inc" as a variable placeholder
-              // to safely pass the number "1" into our expression.
-              ExpressionAttributeValues: { ":inc": 1 },
-            },
-          },
-        ],
-      }),
-    );
+    await postService(service);
 
     // Return 201 Created with the new service data and self link
     res.status(201).json({
@@ -157,7 +130,7 @@ export const createService = async (req, res) => {
  * @returns {Number} 406 - Accept header not application/json
  * @returns {Number} 500 - Internal server error
  */
-export const getAService = async (req, res) => {
+export const fetchServiceById = async (req, res) => {
   // 406: Check Accept header
   const accepts = req.accepts(["application/json"]);
   if (!accepts) {
@@ -170,18 +143,8 @@ export const getAService = async (req, res) => {
   const serviceId = req.params.id;
 
   try {
-    // Look for a service that matches:
-    // EntityId: The unique ID of the service (prefixed with "SERVICE#").
-    // EntityType: The "SERVICE" label assigned when the service was created
-    const result = await docClient.send(
-      new GetCommand({
-        TableName: TABLE_NAME,
-        Key: {
-          EntityId: `SERVICE#${serviceId}`,
-          EntityType: "SERVICE",
-        },
-      }),
-    );
+    // Look for a service that matches the serviceId
+    const result = await getService(serviceId);
 
     // 404: Cannot find service
     if (!result.Item) {
@@ -218,14 +181,10 @@ export const getAService = async (req, res) => {
  * services from a "Stats" record. Then it grabs a "page" of 10 services
  * at a time to keep the app fast. If there are more services, it
  * provides a "next" link (a cursor) to fetch the next page.
- *
- * @source:
- * https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/getting-started-step-5.html
- * https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Query.Pagination.html
  * @returns {Object} JSON: A list of services, the total count,
  * and a "next" link if more pages are available.
  */
-export const getAllServices = async (req, res) => {
+export const getPaginatedServices = async (req, res) => {
   // 406: Check Accept header
   const accepts = req.accepts(["application/json"]);
   if (!accepts) {
@@ -242,28 +201,7 @@ export const getAllServices = async (req, res) => {
     // Run two database lookups at the same time:
     // Get the global count from METRICS (so the UI knows how many items exist)
     // Get the current page of services using our "Shortcut" Index (GSI)
-    const [statsResult, serviceResult] = await Promise.all([
-      docClient.send(
-        new GetCommand({
-          TableName: TABLE_NAME,
-          Key: { EntityId: "METRICS", EntityType: "SERVICE_COUNT" },
-        }),
-      ),
-      docClient.send(
-        new QueryCommand({
-          TableName: TABLE_NAME,
-          IndexName: "RelationshipIndex", // Requires a GSI where SK is Partition Key
-          KeyConditionExpression: "EntityType = :type",
-          ExpressionAttributeValues: { ":type": "SERVICE" },
-          Limit: limit,
-          // If a "cursor" was provided, convert it back from base64 so
-          // DynamoDB knows where to pick up from
-          ExclusiveStartKey: cursor
-            ? JSON.parse(Buffer.from(cursor, "base64").toString())
-            : undefined,
-        }),
-      ),
-    ]);
+    const [statsResult, serviceResult] = await getServices(limit, cursor);
 
     // Format services
     const services = serviceResult.Items.map((item) => {
@@ -304,14 +242,6 @@ export const getAllServices = async (req, res) => {
 
 /**
  * PATCH /services/:id - Partially updates an existing service record.
- *
- * Constructs a DynamoDB UpdateCommand to modify only the
- * valid fields provided in the request body for a service.
- *
- * @source: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.UpdateExpressions.html
- * https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ExpressionAttributeNames.html
- * https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ExpressionAttributeValues.html
- * https://github.com/awsdocs/aws-doc-sdk-examples/blob/main/javascriptv3/example_code/dynamodb/scenarios/basic.js
  * @param {Object} req - Express request object containing 'id' in params and updates in 'body'
  * @returns {Object} 200 - Successful update with the modified service object.
  * @returns {Object} 400 - Bad Request: Unsupported attributes, empty body, or invalid data types.
@@ -321,7 +251,7 @@ export const getAllServices = async (req, res) => {
  * @returns {Object} 415 - Unsupported Media Type: Incorrect Content-Type header.
  * @returns {Object} 500 - Internal Server Error: Database failure or unexpected exception.
  */
-export const updateAService = async (req, res) => {
+export const updateService = async (req, res) => {
   // 415: Check Content-Type
   if (req.get("content-type") !== "application/json") {
     return res
@@ -399,23 +329,13 @@ export const updateAService = async (req, res) => {
       expressionValues[`:${key}`] = req.body[key];
     });
 
-    const updateCommand = new UpdateCommand({
-      TableName: TABLE_NAME,
-      Key: {
-        EntityId: `SERVICE#${serviceId}`,
-        EntityType: "SERVICE",
-      },
-      UpdateExpression: updateExpression, // Instruction expression
-      ExpressionAttributeNames: expressionAttributes, // Dictionary to translate # placeholders
-      ExpressionAttributeValues: expressionValues, // Dictionary to translate : placeholders
-      // ConditionExpression command only runs if the EntityId already exists in the table
-      // If the ID is missing, the update fails to prevent creating data by accident
-      ConditionExpression: "attribute_exists(EntityId)",
-      // ReturnValues tells the database to give us back the full object
-      // as it looks after the update is complete
-      ReturnValues: "ALL_NEW",
-    });
-    const updateResponse = await docClient.send(updateCommand);
+    // Patch this service
+    const updateResponse = await putService(
+      req.params.id,
+      updateExpression,
+      expressionAttributes,
+      expressionValues,
+    );
 
     // Access the attributes correctly
     const updated = updateResponse.Attributes;
@@ -467,7 +387,7 @@ export const updateAService = async (req, res) => {
  * @returns {Object} 406 - Not Acceptable: Incorrect Accept header
  * @returns {Object} 500 - Internal Server Error
  */
-export const deleteAService = async (req, res) => {
+export const removeService = async (req, res) => {
   // 406: Check Accept header
   const accepts = req.accepts(["application/json"]);
   if (!accepts) {
@@ -479,38 +399,8 @@ export const deleteAService = async (req, res) => {
   const serviceId = req.params.id;
 
   try {
-    // Atomic Transaction: Delete service + decrement global count
-    // TODO: Remove a service from a client's services array
-    await docClient.send(
-      new TransactWriteCommand({
-        TransactItems: [
-          {
-            Delete: {
-              TableName: TABLE_NAME,
-              Key: {
-                EntityId: `SERVICE#${serviceId}`,
-                EntityType: "SERVICE",
-              },
-              // Check if this service exists
-              ConditionExpression: "attribute_exists(EntityId)",
-            },
-          },
-          {
-            Update: {
-              TableName: TABLE_NAME,
-              Key: {
-                EntityId: "METRICS",
-                EntityType: "SERVICE_COUNT",
-              },
-              // Subtract 1 from the "count" attribute
-              UpdateExpression: "ADD #c :dec",
-              ExpressionAttributeNames: { "#c": "count" },
-              ExpressionAttributeValues: { ":dec": -1 },
-            },
-          },
-        ],
-      }),
-    );
+    // Delete service and  decrement global service count
+    await deleteService(serviceId);
 
     // 204: Success (No content returned)
     res.status(204).end();
@@ -523,7 +413,7 @@ export const deleteAService = async (req, res) => {
         .json({ Error: "No service with this service_id exists" });
     }
 
-    // 500: Unexpected errors (e.g., connectivity, DynamoDB service issues)
+    // 500: Unexpected errors (connectivity, DynamoDB service issues)
     console.error("CRITICAL DB ERROR:", error);
     res.status(500).json({ Error: "Internal server error" });
   }
