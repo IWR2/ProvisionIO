@@ -15,6 +15,7 @@ import {
   QueryCommand,
   TransactWriteCommand,
   UpdateCommand,
+  DeleteCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "../utils/dynamodb.js";
 
@@ -104,8 +105,7 @@ export const createService = async (req, res) => {
           // Create the new service
           { Put: { TableName: TABLE_NAME, Item: service } },
           // Increment the stats counter
-          // Instead of counting every service one by one, we keep a tally
-          // record that lives at:
+          // Instead of counting every service one by one, we keep a count at:
           // (EntityId: "METRICS", EntityType: "SERVICE_COUNT").
           {
             Update: {
@@ -138,6 +138,7 @@ export const createService = async (req, res) => {
       self: `${req.protocol}://${req.get("host")}/services/${serviceId}`,
     });
   } catch (error) {
+    // 500: Unexpected errors ( connectivity, DynamoDB service issues)
     console.error("Error creating service:", error);
     res.status(500).json({ Error: "Internal server error" });
   }
@@ -205,6 +206,7 @@ export const getAService = async (req, res) => {
       self: `${req.protocol}://${req.get("host")}/services/${extractedServiceId}`,
     });
   } catch (error) {
+    // 500: Unexpected errors ( connectivity, DynamoDB service issues)
     console.error("Error fetching service:", error);
     res.status(500).json({ Error: "Internal server error" });
   }
@@ -294,6 +296,7 @@ export const getAllServices = async (req, res) => {
 
     res.status(200).json(response);
   } catch (error) {
+    // 500: Unexpected errors ( connectivity, DynamoDB service issues)
     console.error("Error fetching services:", error);
     res.status(500).json({ Error: "Internal server error" });
   }
@@ -435,11 +438,89 @@ export const updateAService = async (req, res) => {
         .json({ Error: "No service with this service_id exists" });
     }
 
-    // 400: Database rejected the update parameters (e.g., malformed schema)
+    // 400: Database rejected the update parameters (bad schema)
     if (error.name === "ValidationException") {
       return res
         .status(400)
         .json({ Error: "Invalid request parameters provided to database" });
+    }
+
+    // 500: Unexpected errors ( connectivity, DynamoDB service issues)
+    console.error("CRITICAL DB ERROR:", error);
+    res.status(500).json({ Error: "Internal server error" });
+  }
+};
+
+/**
+ * DELETE /services/:id - Deletes a service and updates global service count.
+ *
+ * Uses a TransactWriteCommand to ensure the service is deleted and
+ * the catalog count is decremented as an atomic unit.
+ *
+ * TODO: Integrate Client cleanup. When Clients are implemented, add a
+ * TransactItem to remove this serviceId from the client's service list.
+ *
+ * @param {Object} req - Express request object containing 'id' in params
+ * @param {Object} res - Express response object
+ * @returns {Object} 204 - No Content (Success)
+ * @returns {Object} 404 - Not Found: The service_id does not exist
+ * @returns {Object} 406 - Not Acceptable: Incorrect Accept header
+ * @returns {Object} 500 - Internal Server Error
+ */
+export const deleteAService = async (req, res) => {
+  // 406: Check Accept header
+  const accepts = req.accepts(["application/json"]);
+  if (!accepts) {
+    return res
+      .status(406)
+      .json({ Error: "Client must accept application/json" });
+  }
+
+  const serviceId = req.params.id;
+
+  try {
+    // Atomic Transaction: Delete service + decrement global count
+    // TODO: Remove a service from a client's services array
+    await docClient.send(
+      new TransactWriteCommand({
+        TransactItems: [
+          {
+            Delete: {
+              TableName: TABLE_NAME,
+              Key: {
+                EntityId: `SERVICE#${serviceId}`,
+                EntityType: "SERVICE",
+              },
+              // Check if this service exists
+              ConditionExpression: "attribute_exists(EntityId)",
+            },
+          },
+          {
+            Update: {
+              TableName: TABLE_NAME,
+              Key: {
+                EntityId: "METRICS",
+                EntityType: "SERVICE_COUNT",
+              },
+              // Subtract 1 from the "count" attribute
+              UpdateExpression: "ADD #c :dec",
+              ExpressionAttributeNames: { "#c": "count" },
+              ExpressionAttributeValues: { ":dec": -1 },
+            },
+          },
+        ],
+      }),
+    );
+
+    // 204: Success (No content returned)
+    res.status(204).end();
+  } catch (error) {
+    // 404: Transaction cancelled because the service was not found
+    // TransactWriteCommand cancels the transaction if any item condition fails
+    if (error.name === "TransactionCanceledException") {
+      return res
+        .status(404)
+        .json({ Error: "No service with this service_id exists" });
     }
 
     // 500: Unexpected errors (e.g., connectivity, DynamoDB service issues)
@@ -447,6 +528,3 @@ export const updateAService = async (req, res) => {
     res.status(500).json({ Error: "Internal server error" });
   }
 };
-
-// TODO: Create DELETE A SERVICE
-export const deleteAService = async (req, res) => {};
