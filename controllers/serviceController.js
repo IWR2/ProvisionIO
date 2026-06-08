@@ -83,10 +83,10 @@ export const createService = async (req, res) => {
     const now = new Date().toISOString();
 
     // Create DynamoDB item with a unique ID and category label
-    // ResourceId: SERVICE#{id}, Category: METADATA for entity type
+    // EntityId: SERVICE#{id}, EntityType: SERVICE
     const service = {
-      ResourceId: `SERVICE#${serviceId}`,
-      Category: "METADATA",
+      EntityId: `SERVICE#${serviceId}`,
+      EntityType: "SERVICE",
       name,
       type,
       price,
@@ -106,12 +106,12 @@ export const createService = async (req, res) => {
           // Increment the stats counter
           // Instead of counting every service one by one, we keep a tally
           // record that lives at:
-          // (ResourceId: "CATALOG", Category: "SERVICE_COUNT").
+          // (EntityId: "METRICS", EntityType: "SERVICE_COUNT").
           {
             Update: {
               TableName: TABLE_NAME,
               // We target a stats record to keep our total count
-              Key: { ResourceId: "CATALOG", Category: "SERVICE_COUNT" },
+              Key: { EntityId: "METRICS", EntityType: "SERVICE_COUNT" },
               // "ADD" tells DynamoDB to perform the math internally,
               // ensuring no data conflicts even if many services are created at once
               // So we add 1 to our count: "Add 1 to the count attribute"
@@ -170,14 +170,14 @@ export const getAService = async (req, res) => {
 
   try {
     // Look for a service that matches:
-    // ResourceId: The unique ID of the service (prefixed with "SERVICE#").
-    // Category: The "METADATA" label assigned when the service was created
+    // EntityId: The unique ID of the service (prefixed with "SERVICE#").
+    // EntityType: The "SERVICE" label assigned when the service was created
     const result = await docClient.send(
       new GetCommand({
         TableName: TABLE_NAME,
         Key: {
-          ResourceId: `SERVICE#${serviceId}`,
-          Category: "METADATA",
+          EntityId: `SERVICE#${serviceId}`,
+          EntityType: "SERVICE",
         },
       }),
     );
@@ -192,14 +192,17 @@ export const getAService = async (req, res) => {
     const service = result.Item;
 
     // Return 200 found service
+    // Strips the "SERVICE#" prefix to return just the ID
+    const extractedServiceId = service.EntityId.replace("SERVICE#", "");
+
     res.status(200).json({
-      id: service.ResourceId.replace("SERVICE#", ""), // Strips the "SERVICE#" prefix to return just the ID
+      id: extractedServiceId,
       name: service.name,
       type: service.type,
       price: service.price,
       client: service.clientId,
       // Reconstructs the URL to point back to this specific resource.
-      self: `${req.protocol}://${req.get("host")}/services/${service.ResourceId.replace("SERVICE#", "")}`,
+      self: `${req.protocol}://${req.get("host")}/services/${extractedServiceId}`,
     });
   } catch (error) {
     console.error("Error fetching service:", error);
@@ -235,21 +238,21 @@ export const getAllServices = async (req, res) => {
 
   try {
     // Run two database lookups at the same time:
-    // Get the global count from the catalog (so the UI knows how many items exist)
+    // Get the global count from METRICS (so the UI knows how many items exist)
     // Get the current page of services using our "Shortcut" Index (GSI)
     const [statsResult, serviceResult] = await Promise.all([
       docClient.send(
         new GetCommand({
           TableName: TABLE_NAME,
-          Key: { ResourceId: "CATALOG", Category: "SERVICE_COUNT" },
+          Key: { EntityId: "METRICS", EntityType: "SERVICE_COUNT" },
         }),
       ),
       docClient.send(
         new QueryCommand({
           TableName: TABLE_NAME,
-          IndexName: "ServicesByCategoryIndex", // Requires a GSI where SK is Partition Key
-          KeyConditionExpression: "Category = :cat",
-          ExpressionAttributeValues: { ":cat": "METADATA" },
+          IndexName: "RelationshipIndex", // Requires a GSI where SK is Partition Key
+          KeyConditionExpression: "EntityType = :type",
+          ExpressionAttributeValues: { ":type": "SERVICE" },
           Limit: limit,
           // If a "cursor" was provided, convert it back from base64 so
           // DynamoDB knows where to pick up from
@@ -261,14 +264,17 @@ export const getAllServices = async (req, res) => {
     ]);
 
     // Format services
-    const services = serviceResult.Items.map((item) => ({
-      id: item.ResourceId.replace("SERVICE#", ""),
-      name: item.name,
-      type: item.type,
-      price: item.price,
-      client: item.clientId,
-      self: `${req.protocol}://${req.get("host")}/services/${item.ResourceId.replace("SERVICE#", "")}`,
-    }));
+    const services = serviceResult.Items.map((item) => {
+      const extractedServiceId = item.EntityId.replace("SERVICE#", "");
+      return {
+        id: extractedServiceId,
+        name: item.name,
+        type: item.type,
+        price: item.price,
+        client: item.client,
+        self: `${req.protocol}://${req.get("host")}/services/${extractedServiceId}`,
+      };
+    });
 
     // Build response
     const response = {
@@ -392,15 +398,16 @@ export const updateAService = async (req, res) => {
 
     const updateCommand = new UpdateCommand({
       TableName: TABLE_NAME,
-      Key: { ResourceId: `SERVICE#${serviceId}`, Category: "METADATA" },
+      Key: {
+        EntityId: `SERVICE#${serviceId}`,
+        EntityType: "SERVICE",
+      },
       UpdateExpression: updateExpression, // Instruction expression
       ExpressionAttributeNames: expressionAttributes, // Dictionary to translate # placeholders
       ExpressionAttributeValues: expressionValues, // Dictionary to translate : placeholders
-
-      // ConditionExpression command only runs if the ResourceId already exists in the table
+      // ConditionExpression command only runs if the EntityId already exists in the table
       // If the ID is missing, the update fails to prevent creating data by accident
-      ConditionExpression: "attribute_exists(ResourceId)",
-
+      ConditionExpression: "attribute_exists(EntityId)",
       // ReturnValues tells the database to give us back the full object
       // as it looks after the update is complete
       ReturnValues: "ALL_NEW",
@@ -409,15 +416,16 @@ export const updateAService = async (req, res) => {
 
     // Access the attributes correctly
     const updated = updateResponse.Attributes;
+    const extractedServiceId = updated.EntityId.replace("SERVICE#", "");
 
     // 200: Successful Patch Return the newly modified service
     res.status(200).json({
-      id: updated.ResourceId.replace("SERVICE#", ""),
+      id: extractedServiceId,
       name: updated.name,
       type: updated.type,
       price: updated.price,
       client: updated.clientId,
-      self: `${req.protocol}://${req.get("host")}/services/${serviceId}`,
+      self: `${req.protocol}://${req.get("host")}/services/${extractedServiceId}`,
     });
   } catch (error) {
     // 404: Condition check failed because the ResourceId does not exist
