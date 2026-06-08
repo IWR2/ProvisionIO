@@ -17,7 +17,7 @@ import { client, TABLE_NAME } from "../utils/dynamodb.js";
  * POST /init - Creates the DynamoDB table and its index.
  * Should be called ONCE before using any other endpoints.
  *
- * Table uses single-table design with PK (Partition Key) and SK (Sort Key).
+ * Table uses single-table design with EntityId (Partition Key) and EntityType (Sort Key).
  * @source: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/getting-started-step-1.html
  * https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GSI.html#GSI.scenario
  * https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GSI.html#GSI.Projections
@@ -32,28 +32,29 @@ export const createTable = async (req, res) => {
     // Create the table
     const command = new CreateTableCommand({
       TableName: TABLE_NAME,
-      // Every item in our database needs two identifiers to be found:
-      // ResourceId: The unique "File Name" ("SERVICE#123" or "CATALOG")
-      // Category: The "Folder Name" or group label ("METADATA" or "SERVICE_COUNT")
+      // Every item uses:
+      // EntityId: The unique identifier ("SERVICE#123", "CLIENT#456", "USER#789")
+      // EntityType: The category label ("SERVICE", "SERVICE_COUNT")
       AttributeDefinitions: [
-        { AttributeName: "ResourceId", AttributeType: "S" },
-        { AttributeName: "Category", AttributeType: "S" },
+        { AttributeName: "EntityId", AttributeType: "S" },
+        { AttributeName: "EntityType", AttributeType: "S" },
       ],
       KeySchema: [
-        { AttributeName: "ResourceId", KeyType: "HASH" },
-        { AttributeName: "Category", KeyType: "RANGE" },
+        { AttributeName: "EntityId", KeyType: "HASH" },
+        { AttributeName: "EntityType", KeyType: "RANGE" },
       ],
       // Global Secondary Index (GSI):
-      // By default, you can only find items if you know their exact "File Name" (ResourceId).
+      // By default, you can only find items if you know their exact Entity ID.
       // We create this index to "flip" the lookup: it acts like a library card catalog
-      // where we look up files by their "Folder Name" (Category) first
-      // This allows us to list all items within a Category without knowing their IDs
+      // where we look up files by their "Entity Type" ("SERVICE", 'CLIENT#456') first
+      // This allows us to list all related items (like all services for a specific client)
+      // without needing to know the individual ID of each service
       GlobalSecondaryIndexes: [
         {
-          IndexName: "ServicesByCategoryIndex",
+          IndexName: "RelationshipIndex",
           KeySchema: [
-            { AttributeName: "Category", KeyType: "HASH" },
-            { AttributeName: "ResourceId", KeyType: "RANGE" },
+            { AttributeName: "EntityType", KeyType: "HASH" },
+            { AttributeName: "EntityId", KeyType: "RANGE" },
           ],
           Projection: {
             ProjectionType: "ALL", // Ensures all data is available in the index
