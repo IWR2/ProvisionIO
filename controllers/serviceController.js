@@ -25,13 +25,11 @@ import {
  *
  * @source: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/getting-started-step-2.html
  * https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_TransactWriteItems.html
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
  * @returns {Object} 201 Created with service data and self link
- * @returns {Object} 400 Bad Request for missing/invalid attributes
- * @returns {Object} 406 Not Acceptable for wrong Accept header
- * @returns {Object} 415 Unsupported Media Type for wrong Content-Type
- * @returns {Object} 500 Internal Server Error
+ * @returns {Object} 400 Bad Request for missing required attributes or extra/unsupported fields
+ * @returns {Object} 406 Not Acceptable if the client does not accept application/json
+ * @returns {Object} 415 Unsupported Media Type if the request content-type is not application/json
+ * @returns {Object} 500 Internal Server Error for database or system failures
  */
 export const createService = async (req, res) => {
   // 415: Check Content-Type
