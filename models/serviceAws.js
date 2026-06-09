@@ -51,7 +51,7 @@ export const postService = async (service) => {
 
 /**
  * Retrieves a single service record by its unique ID.
- * * @param {string} serviceId - The unique identifier of the service (without the 'SERVICE#' prefix).
+ * * @param {string} serviceId - The unique identifier of the service (without the "SERVICE#" prefix).
  * @returns {Promise<Object>} The DynamoDB response object containing the service item.
  * @source: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/getting-started-step-3.html
  */
