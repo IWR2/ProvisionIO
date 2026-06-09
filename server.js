@@ -25,6 +25,7 @@ import pkg from "express-openid-connect";
 import adminRoutes from "./routes/adminRoutes.js";
 import serviceRoutes from "./routes/serviceRoutes.js";
 import usersRoutes from "./routes/usersRoutes.js";
+import clientsRoutes from "./routes/clientRoutes.js";
 import { checkJwt } from "./services/auth.js";
 
 const { auth: webAuth, requiresAuth } = pkg;
@@ -159,6 +160,7 @@ app.use("/users", usersRoutes);
  * TODO: POST /clients
  * Creates a new client associated with the authenticated user.
  */
+app.use("/clients", checkJwt, clientsRoutes);
 
 /**
  * TODO: GET /clients
@@ -227,6 +229,38 @@ app.use("/services", serviceRoutes);
  * Removes a service from a client. Updates both the client's services array
  * and the service's client reference (sets to null).
  */
+
+/**
+ * Intercepts authentication errors thrown. Catches
+ * UnauthorizedError/InvalidTokenError to return 401 for
+ * authentication issues.
+ *
+ * @param {Error} err - The error object thrown by Auth0.
+ * @param {Object} req - The Express request object.
+ * @param {Object} res - The Express response object.
+ * @param {Object} next - The next middleware function.
+ * @returns {void} Sends a JSON error response.
+ */
+app.use((err, req, res, next) => {
+  // Check if the user provided a bad or missing (JWT) bearer token
+  if (
+    err.name === "UnauthorizedError" ||
+    err.name === "InvalidTokenError" ||
+    (err.message && err.message.includes("Invalid Token"))
+  ) {
+    return res.status(401).json({
+      Error: "Unauthorized",
+      Message: "The provided token is invalid, malformed, or missing.",
+    });
+  }
+
+  // Check for server error
+  console.error("Global Error Handler:", err);
+  res.status(500).json({
+    Error: "Internal Server Error",
+    Message: "An unexpected error occurred.",
+  });
+});
 
 app.listen(PORT, () => {
   console.log(
