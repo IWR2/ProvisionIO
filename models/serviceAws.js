@@ -70,10 +70,11 @@ export const getService = async (serviceId) => {
 /**
  * Fetches a page of services. It fetches the total number of
  * services from a "Stats" record. Then it grabs a "page" of 10 services
- * at a time to keep the app fast. If there are more services, it
- * provides a "next" link (a cursor) to fetch the next page.
- * @param {number} limit - The maximum number of services to return.
- * @param {string} [cursor] - Base64 encoded 'ExclusiveStartKey' for pagination.
+ * at a time to keep the. If there are more services, it provides a "next"
+ * link (a cursor) to fetch the next page.
+ * @param {number} limit - The maximum number of services to return in the query.
+ * @param {string} [cursor] - Base64 encoded string representing the ExclusiveStartKey
+ * from a previous page.
  * @returns {Promise<[Object, Object]>} An array containing [statsResult, serviceResult].
  * @source:
  * https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/getting-started-step-5.html
@@ -86,7 +87,7 @@ export const getService = async (serviceId) => {
 export const getServices = async (limit, cursor) => {
   // Run two database lookups at the same time:
   // Get the global count from METRICS (so the UI knows how many items exist)
-  // Get the current page of services using our "Shortcut" Index (GSI)
+  // Get the current page of services using GSI
   return await Promise.all([
     docClient.send(
       new GetCommand({
@@ -97,7 +98,7 @@ export const getServices = async (limit, cursor) => {
     docClient.send(
       new QueryCommand({
         TableName: TABLE_NAME,
-        IndexName: "RelationshipIndex", // Requires a GSI where SK is Partition Key
+        IndexName: "TypeIndex", // SK to get all services
         KeyConditionExpression: "EntityType = :type",
         ExpressionAttributeValues: { ":type": "SERVICE" },
         Limit: limit,
