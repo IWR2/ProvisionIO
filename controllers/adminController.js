@@ -16,6 +16,9 @@ import { client, TABLE_NAME } from "../utils/dynamodb.js";
 /**
  * POST /init - Creates the DynamoDB table and its index.
  * Should be called ONCE before using any other endpoints.
+ * Includes two Global Secondary Indexes for optimized query patterns:
+ * 1. TypeIndex: Used to find all items of a specific category (all SERVICES, all CLIENTS)
+ * 2. OwnerIndex: Used to find all clients assigned to a specific user (all CLIENTS for one owner).
  *
  * Table uses single-table design with EntityId (Partition Key) and EntityType (Sort Key).
  * @source: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/getting-started-step-1.html
@@ -35,9 +38,11 @@ export const createTable = async (req, res) => {
       // Every item uses:
       // EntityId: The unique identifier ("SERVICE#123", "CLIENT#456", "USER#789")
       // EntityType: The category label ("SERVICE", "SERVICE_COUNT")
+      // owner: The user that owns this client
       AttributeDefinitions: [
         { AttributeName: "EntityId", AttributeType: "S" },
         { AttributeName: "EntityType", AttributeType: "S" },
+        { AttributeName: "owner", AttributeType: "S" },
       ],
       KeySchema: [
         { AttributeName: "EntityId", KeyType: "HASH" },
@@ -50,8 +55,9 @@ export const createTable = async (req, res) => {
       // This allows us to list all related items (like all services for a specific client)
       // without needing to know the individual ID of each service
       GlobalSecondaryIndexes: [
+        // Used to query by type (services, clients)
         {
-          IndexName: "RelationshipIndex",
+          IndexName: "TypeIndex",
           KeySchema: [
             { AttributeName: "EntityType", KeyType: "HASH" },
             { AttributeName: "EntityId", KeyType: "RANGE" },
@@ -60,12 +66,21 @@ export const createTable = async (req, res) => {
             ProjectionType: "ALL", // Ensures all data is available in the index
           },
         },
+        // Used to query clients by user ownership
+        {
+          IndexName: "OwnerIndex",
+          KeySchema: [
+            { AttributeName: "owner", KeyType: "HASH" },
+            { AttributeName: "EntityId", KeyType: "RANGE" },
+          ],
+          Projection: { ProjectionType: "ALL" },
+        },
       ],
       BillingMode: "PAY_PER_REQUEST",
     });
     // Send the command to DynamoDB to create the table
     await client.send(command);
-    console.log(`Table ${TABLE_NAME} created successfully`);
+    console.log(`Table ${TABLE_NAME} created successfully with OwnerIndex`);
     res.json({ message: `${TABLE_NAME} created successfully` });
   } catch (error) {
     // Handle table already exists
