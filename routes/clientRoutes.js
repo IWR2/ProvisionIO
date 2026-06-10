@@ -8,6 +8,7 @@ import express from "express";
 import {
   createClient,
   fetchClientById,
+  getPaginatedClients,
 } from "../controllers/clientController.js";
 
 const router = express.Router();
@@ -16,5 +17,6 @@ const router = express.Router();
 router.post("/", createClient);
 
 router.get("/:id", fetchClientById);
+router.get("/", getPaginatedClients);
 
 export default router;
