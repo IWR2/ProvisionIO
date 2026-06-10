@@ -222,7 +222,7 @@ export const getPaginatedServices = async (req, res) => {
 
     // Add next link if more results exist
     // If DynamoDB gives us a "LastEvaluatedKey", it means there is more data
-    // We package that key into a base64 "Next" link for the client.
+    // We package that key into a base64 "Next" link for the client
     if (serviceResult.LastEvaluatedKey) {
       const cursorBase64 = Buffer.from(
         JSON.stringify(serviceResult.LastEvaluatedKey),
