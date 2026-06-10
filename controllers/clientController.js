@@ -10,7 +10,7 @@
  */
 
 import { randomUUID } from "crypto";
-import { postClient, getClient } from "../models/clientAws.js";
+import { postClient, getClient, getClients } from "../models/clientAws.js";
 
 /**
  * POST /clients - Creates a new client record and stores it in DynamoDB.
@@ -169,6 +169,76 @@ export const fetchClientById = async (req, res) => {
   } catch (error) {
     // 500: Unexpected errors ( connectivity, DynamoDB service issues)
     console.error("Error fetching service:", error);
+    res.status(500).json({ Error: "Internal server error" });
+  }
+};
+
+/**
+ * GET /clients
+ * Fetches a paginated list of clients owned by the authenticated user.
+ * * Retrieves the total count of clients for the user and a subset (limit 10)
+ * of client records. Uses cursor-based pagination via the 'OwnerIndex' GSI
+ * to ensure high performance and data isolation.
+ * * @param {Object} req - The Express request object.
+ * @param {Object} req.auth.payload - The JWT claims, used to extract the 'sub' (userId).
+ * @param {string} [req.query.cursor] - Base64 encoded 'LastEvaluatedKey' for pagination.
+ * @param {Object} res - The Express response object.
+ * * @returns {Object} 200 - { clients: Array, items: Number, next?: String }
+ * @returns {Object} 406 - Error: "Client must accept application/json"
+ * @returns {Object} 500 - Error: "Internal server error"
+ */
+export const getPaginatedClients = async (req, res) => {
+  // 406: Check Accept header
+  const accepts = req.accepts(["application/json"]);
+  if (!accepts) {
+    return res
+      .status(406)
+      .json({ Error: "Client must accept application/json" });
+  }
+
+  // Get the user ID Bearer Token (JWT)
+  const userId = req.auth.payload.sub;
+  // Define pagination settings: how many items per "page"
+  const limit = 10;
+  const cursor = req.query.cursor;
+
+  try {
+    // Get the count of clients for this user and the info for each client
+    const [statsResult, clientResult] = await getClients(userId, limit, cursor);
+    // Format the clients
+    const clients = clientResult.Items.map((item) => {
+      const clientId = item.EntityId.replace("CLIENT#", "");
+      return {
+        id: clientId,
+        name: item.name,
+        contact_manager: item.contact_manager,
+        email: item.email,
+        owner: item.owner,
+        services: item.services,
+        self: `${req.protocol}://${req.get("host")}/clients/${clientId}`,
+      };
+    });
+
+    const response = {
+      clients,
+      // Count of clients for this user
+      items: statsResult.Item ? statsResult.Item.count : 0,
+    };
+
+    // Add next link if more results exist
+    // If DynamoDB gives us a "LastEvaluatedKey", it means there is more data
+    // We package that key into a base64 "Next" link for the client
+    if (clientResult.LastEvaluatedKey) {
+      const cursorBase64 = Buffer.from(
+        JSON.stringify(clientResult.LastEvaluatedKey),
+      ).toString("base64");
+      response.next = `${req.protocol}://${req.get("host")}${req.baseUrl}?cursor=${cursorBase64}`;
+    }
+
+    res.status(200).json(response);
+  } catch (error) {
+    // 500: Unexpected errors ( connectivity, DynamoDB service issues)
+    console.error("Error fetching services:", error);
     res.status(500).json({ Error: "Internal server error" });
   }
 };
