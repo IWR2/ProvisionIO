@@ -3,6 +3,7 @@ import {
   TransactWriteCommand,
   GetCommand,
   QueryCommand,
+  UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "../utils/dynamodb.js";
 
@@ -95,4 +96,31 @@ export const getClients = async (userId, limit, cursor) => {
       }),
     ),
   ]);
+};
+
+/**
+ * Partially updates an existing client record in DynamoDB.
+ * @param {string} serviceId - The unique ID of the cliente.
+ * @param {string} updateExpression - The string defining which fields to update.
+ * @param {Object} expressionAttributes - Map of placeholders to attribute names.
+ * @param {Object} expressionValues - Map of placeholders to new attribute values.
+ * @returns {Promise<>} - A promise with the updated client item.
+ */
+export const putClient = async (
+  clientId,
+  updateExpression,
+  expressionAttributes,
+  expressionValues,
+) => {
+  return await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { EntityId: `CLIENT#${clientId}`, EntityType: "CLIENT" },
+      UpdateExpression: updateExpression,
+      ExpressionAttributeNames: expressionAttributes,
+      ExpressionAttributeValues: expressionValues,
+      ConditionExpression: "attribute_exists(EntityId)",
+      ReturnValues: "ALL_NEW",
+    }),
+  );
 };
