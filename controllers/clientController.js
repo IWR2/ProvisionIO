@@ -184,11 +184,11 @@ export const fetchClientById = async (req, res) => {
  * * Retrieves the total count of clients for the user and a subset (limit 10)
  * of client records. Uses cursor-based pagination via the 'OwnerIndex' GSI
  * to ensure high performance and data isolation.
- * * @param {Object} req - The Express request object.
+ * @param {Object} req - The Express request object.
  * @param {Object} req.auth.payload - The JWT claims, used to extract the 'sub' (userId).
  * @param {string} [req.query.cursor] - Base64 encoded 'LastEvaluatedKey' for pagination.
  * @param {Object} res - The Express response object.
- * * @returns {Object} 200 - { clients: Array, items: Number, next?: String }
+ * @returns {Object} 200 - { clients: Array, items: Number, next?: String }
  * @returns {Object} 406 - Error: "Client must accept application/json"
  * @returns {Object} 500 - Error: "Internal server error"
  */
