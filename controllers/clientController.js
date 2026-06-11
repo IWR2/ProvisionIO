@@ -380,3 +380,114 @@ export const updateClient = async (req, res) => {
     res.status(500).json({ Error: "Internal server error" });
   }
 };
+
+/**
+ * PUT /clients/:id - Replaces an existing client record entirely.
+ * Requires JWT authentication and verification that the authenticated user is the owner of the client.
+ * Enforces a strict schema: the request body must contain exactly the name, contact_manager, and email fields.
+ * @param {Object} req - Express request object containing "id" in params and the full client object in "body"
+ * @returns {Object} 200 - Successful replacement with the updated client object.
+ * @returns {Object} 400 - Bad Request: Missing required fields, unsupported attributes, or invalid email format.
+ * @returns {Object} 403 - Forbidden: Unauthorized access or attempt to modify immutable fields (clientId).
+ * @returns {Object} 404 - Not Found: The specified client_id does not exist.
+ * @returns {Object} 406 - Not Acceptable: Incorrect Accept header.
+ * @returns {Object} 415 - Unsupported Media Type: Incorrect Content-Type header.
+ * @returns {Object} 500 - Internal Server Error: Database failure or unexpected exception.
+ */
+export const replaceClient = async (req, res) => {
+  // 415: Check Content-Type
+  if (req.get("content-type") !== "application/json") {
+    return res
+      .status(415)
+      .json({ Error: "Server only accepts application/json data" });
+  }
+
+  // 406: Check Accept header
+  const accepts = req.accepts(["application/json"]);
+  if (!accepts) {
+    return res
+      .status(406)
+      .json({ Error: "Client must accept application/json" });
+  }
+
+  const clientId = req.params.id;
+  const bodyKeys = Object.keys(req.body);
+  const requiredFields = ["name", "contact_manager", "email"];
+
+  // 403: Prevent modifying clientId
+  if (bodyKeys.includes("clientId")) {
+    return res.status(403).json({ Error: "clientId cannot be modified" });
+  }
+
+  // 400: Check for unsupported attributes
+  const unsupported = bodyKeys.filter((key) => !requiredFields.includes(key));
+  if (unsupported.length > 0) {
+    return res.status(400).json({
+      Error: `The request object includes unsupported attributes: ${unsupported.join(", ")}`,
+    });
+  }
+
+  // 400: Check for all required fields
+  const missing = requiredFields.filter((field) => !req.body[field]);
+  if (missing.length > 0) {
+    return res
+      .status(400)
+      .json({ Error: `Missing required fields: ${missing.join(", ")}` });
+  }
+
+  // 400: Email format validation
+  if (req.body.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(req.body.email)) {
+    return res.status(400).json({ Error: "Invalid email format" });
+  }
+
+  try {
+    // 4. Fetch and Ownership Check
+    const result = await getClient(clientId);
+    if (!result.Item)
+      return res
+        .status(404)
+        .json({ Error: "No client with this client_id exists" });
+
+    if (req.auth.payload.sub !== result.Item.owner) {
+      return res.status(403).json({
+        Error: "The user does not have access privileges to this client",
+      });
+    }
+
+    // Explicitly overwrite every field
+    const updateExpression = "SET #n = :n, #cm = :cm, #e = :e";
+    const expressionAttributes = {
+      "#n": "name",
+      "#cm": "contact_manager",
+      "#e": "email",
+    };
+    const expressionValues = {
+      ":n": req.body.name,
+      ":cm": req.body.contact_manager,
+      ":e": req.body.email,
+    };
+
+    const updateResponse = await putClient(
+      req.params.id,
+      updateExpression,
+      expressionAttributes,
+      expressionValues,
+    );
+
+    // Access the attributes
+    const updated = updateResponse.Attributes;
+    const extractedClientId = updated.EntityId.replace("CLIENT#", "");
+    res.status(200).json({
+      id: extractedClientId,
+      name: updated.name,
+      contact_manager: updated.contact_manager,
+      email: updated.email,
+      owner: updated.owner,
+      services: updated.services || [],
+      self: `${req.protocol}://${req.get("host")}${req.baseUrl}/${req.params.id}`,
+    });
+  } catch (error) {
+    console.error("PUT ERROR:", error);
+    res.status(500).json({ Error: "Internal server error" });
+  }
+};
