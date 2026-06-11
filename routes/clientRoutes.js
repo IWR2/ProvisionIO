@@ -10,6 +10,7 @@ import {
   fetchClientById,
   getPaginatedClients,
   updateClient,
+  replaceClient,
 } from "../controllers/clientController.js";
 
 const router = express.Router();
@@ -21,5 +22,6 @@ router.get("/:id", fetchClientById);
 router.get("/", getPaginatedClients);
 
 router.patch("/:id", updateClient);
+router.put("/:id", replaceClient);
 
 export default router;
