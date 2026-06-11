@@ -118,7 +118,7 @@ export const getServices = async (limit, cursor) => {
  * @param {string} updateExpression - The string defining which fields to update.
  * @param {Object} expressionAttributes - Map of placeholders to attribute names.
  * @param {Object} expressionValues - Map of placeholders to new attribute values.
- * @returns {Promise<import('@aws-sdk/lib-dynamodb').UpdateCommandOutput>} - A promise with the updated service item.
+ * @returns {Promise<>} - A promise with the updated service item.
  * @source: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.UpdateExpressions.html
  * https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ExpressionAttributeNames.html
  * https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ExpressionAttributeValues.html
@@ -150,7 +150,7 @@ export const putService = async (
 /**
  * Atomically deletes a service and decrements the global service count.
  * @param {string} serviceId - The unique ID of the service to remove (without the 'SERVICE#' prefix).
- * @returns {Promise<import('@aws-sdk/lib-dynamodb').TransactWriteCommandOutput>}
+ * @returns {Promise<Object>}
  * The response object from DynamoDB confirming the transactional delete and update.
  * @todo Integrate Client cleanup: When client-service linking is implemented,
  * add a TransactItem to remove this serviceId from the associated client's record.
