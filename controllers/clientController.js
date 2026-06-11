@@ -10,7 +10,12 @@
  */
 
 import { randomUUID } from "crypto";
-import { postClient, getClient, getClients } from "../models/clientAws.js";
+import {
+  postClient,
+  getClient,
+  getClients,
+  putClient,
+} from "../models/clientAws.js";
 
 /**
  * POST /clients - Creates a new client record and stores it in DynamoDB.
@@ -239,6 +244,139 @@ export const getPaginatedClients = async (req, res) => {
   } catch (error) {
     // 500: Unexpected errors ( connectivity, DynamoDB service issues)
     console.error("Error fetching services:", error);
+    res.status(500).json({ Error: "Internal server error" });
+  }
+};
+
+/**
+ * PATCH /clients/:id - Partially updates an existing client record.
+ * Requires JWT authentication. Verifies that the authenticated user is the owner of the client.
+ * @param {Object} req - Express request object containing "id" in params and updates in "body"
+ * @returns {Object} 200 - Successful update with the modified client object.
+ * @returns {Object} 400 - Bad Request: Unsupported attributes, empty body, or invalid email format.
+ * @returns {Object} 403 - Forbidden: Unauthorized access or attempt to modify immutable fields (clientId).
+ * @returns {Object} 404 - Not Found: The specified client_id does not exist.
+ * @returns {Object} 406 - Not Acceptable: Incorrect Accept header.
+ * @returns {Object} 415 - Unsupported Media Type: Incorrect Content-Type header.
+ * @returns {Object} 500 - Internal Server Error: Database failure or unexpected exception.
+ */
+export const updateClient = async (req, res) => {
+  // 415: Check Content-Type
+  if (req.get("content-type") !== "application/json") {
+    return res
+      .status(415)
+      .json({ Error: "Server only accepts application/json data" });
+  }
+
+  // 406: Check Accept header
+  const accepts = req.accepts(["application/json"]);
+  if (!accepts) {
+    return res
+      .status(406)
+      .json({ Error: "Client must accept application/json" });
+  }
+
+  const clientId = req.params.id;
+  const bodyKeys = Object.keys(req.body);
+  const allowedUpdates = ["name", "contact_manager", "email"];
+
+  // 403: Prevent modifying clientId
+  if (bodyKeys.includes("clientId")) {
+    return res.status(403).json({ Error: "clientId cannot be modified" });
+  }
+
+  // 400: Check for unsupported attributes
+  const unsupported = bodyKeys.filter((key) => !allowedUpdates.includes(key));
+  if (unsupported.length > 0) {
+    return res.status(400).json({
+      Error: `The request object includes unsupported attributes: ${unsupported.join(", ")}`,
+    });
+  }
+
+  // 400: Check for optional allowed attributes
+  if (bodyKeys.length === 0) {
+    return res.status(400).json({
+      Error: `The request must include at least one valid attribute: ${allowedUpdates.join(", ")}`,
+    });
+  }
+
+  // 400: Email format validation
+  if (req.body.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(req.body.email)) {
+    return res.status(400).json({ Error: "Invalid email format" });
+  }
+
+  try {
+    // Check if this client exists and ownership check
+    const result = await getClient(clientId);
+    if (!result.Item) {
+      return res
+        .status(404)
+        .json({ Error: "No client with this client_id exists" });
+    }
+
+    if (req.auth.payload.sub !== result.Item.owner) {
+      return res.status(403).json({
+        Error: "The user does not have access privileges to this client",
+      });
+    }
+
+    // 3. Construct Update Expression
+    // Maps #placeholders to field names ("#fName" -> "name")
+    const expressionAttributes = {};
+    // Maps :placeholders to the new values (":name" -> "Dott Toward")
+    const expressionValues = {};
+    let expressions = [];
+
+    // Look at every key the user sent in their request body.
+    bodyKeys.forEach((key) => {
+      // Add a key from the request body
+      // "SET updatedAt = :now, #fName = :Name, #fcontact_manager = :Contact_Manager"
+      expressions.push(`#f${key} = :${key}`);
+      // Using a # prefix bypasses these DynamoDB's reserved word ("TYPE" or "DATE") restrictions
+      expressionAttributes[`#f${key}`] = key;
+      expressionValues[`:${key}`] = req.body[key];
+    });
+    const updateExpression = "SET " + expressions.join(", ");
+
+    // Patch this client
+    const updateResponse = await putClient(
+      clientId,
+      updateExpression,
+      expressionAttributes,
+      expressionValues,
+    );
+
+    // Access the attributes
+    const updated = updateResponse.Attributes;
+    const extractedClientId = updated.EntityId.replace("CLIENT#", "");
+
+    // 200: Successful Patch Return the modified client
+    res.status(200).json({
+      id: extractedClientId,
+      name: updated.name,
+      contact_manager: updated.contact_manager,
+      email: updated.email,
+      owner: updated.owner,
+      services: updated.services || [],
+      self: `${req.protocol}://${req.get("host")}${req.baseUrl}/${extractedClientId}`,
+    });
+  } catch (error) {
+    // 404: Condition check failed because the ResourceId does not exist
+    if (error.name === "ConditionalCheckFailedException") {
+      return res
+        .status(404)
+        .json({ Error: "No client with this client_id exists" });
+    }
+
+    // 400: Database rejected the update parameters (bad schema)
+    if (error.name === "ValidationException") {
+      return res
+        .status(400)
+        .json({ Error: "Invalid request parameters provided to database" });
+    }
+
+    // 500: Unexpected errors (connectivity, DynamoDB service issues)
+    console.error("CRITICAL DB ERROR:", error);
     res.status(500).json({ Error: "Internal server error" });
   }
 };
