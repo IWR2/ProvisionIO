@@ -19,6 +19,7 @@ import { client, TABLE_NAME } from "../utils/dynamodb.js";
  * Includes two Global Secondary Indexes for optimized query patterns:
  * 1. TypeIndex: Used to find all items of a specific category (all SERVICES, all CLIENTS)
  * 2. OwnerIndex: Used to find all clients assigned to a specific user (all CLIENTS for one owner).
+ * 3. ClientServiceIndex: Used to find all services belinging to a client (all SERVICES for one CLIENT).
  *
  * Table uses single-table design with EntityId (Partition Key) and EntityType (Sort Key).
  * @source: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/getting-started-step-1.html
@@ -35,14 +36,16 @@ export const createTable = async (req, res) => {
     // Create the table
     const command = new CreateTableCommand({
       TableName: TABLE_NAME,
-      // Every item uses:
-      // EntityId: The unique identifier ("SERVICE#123", "CLIENT#456", "USER#789")
-      // EntityType: The category label ("SERVICE", "SERVICE_COUNT")
-      // owner: The user that owns this client
+      // Every item in the table utilizes the following attributes:
+      // EntityId:   The unique identifier for the record ("SERVICE#123", "CLIENT#456", "USER#789")
+      // EntityType: The category label ("SERVICE", "CLIENT", "METRICS")
+      // owner:      The ID of the user who owns the record (used for OwnerIndex)
+      // clientId:   The ID of the client associated with a service (used for ClientServiceIndex)
       AttributeDefinitions: [
         { AttributeName: "EntityId", AttributeType: "S" },
         { AttributeName: "EntityType", AttributeType: "S" },
         { AttributeName: "owner", AttributeType: "S" },
+        { AttributeName: "clientId", AttributeType: "S" },
       ],
       KeySchema: [
         { AttributeName: "EntityId", KeyType: "HASH" },
@@ -71,6 +74,15 @@ export const createTable = async (req, res) => {
           IndexName: "OwnerIndex",
           KeySchema: [
             { AttributeName: "owner", KeyType: "HASH" },
+            { AttributeName: "EntityId", KeyType: "RANGE" },
+          ],
+          Projection: { ProjectionType: "ALL" },
+        },
+        // Used to query services by clientId
+        {
+          IndexName: "ClientServiceIndex",
+          KeySchema: [
+            { AttributeName: "clientId", KeyType: "HASH" },
             { AttributeName: "EntityId", KeyType: "RANGE" },
           ],
           Projection: { ProjectionType: "ALL" },
