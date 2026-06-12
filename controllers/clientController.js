@@ -16,6 +16,7 @@ import {
   getClients,
   putClient,
   assignServiceToClient,
+  getClientServices,
 } from "../models/clientAws.js";
 
 import { getService } from "../models/serviceAws.js";
@@ -24,8 +25,9 @@ import { getService } from "../models/serviceAws.js";
  * POST /clients - Creates a new client record and stores it in DynamoDB.
  * Requires JWT authentication.
  *
- * @param {Object} req - Express request object containing the JWT payload and client data.
- * @param {Object} res - Express response object.
+ * @param {Object} req - Express request object.
+ * @param {string} req.params.id - The unique ID of the client.
+ * @param {Object} req.auth - The authenticated user information.
  * @returns {Object} 201 Created with the new client data and a self link
  * @returns {Object} 400 Bad Request for missing required attributes or extra/unsupported fields
  * @returns {Object} 406 Not Acceptable if the client does not accept application/json
@@ -85,7 +87,6 @@ export const createClient = async (req, res) => {
       name,
       contact_manager,
       email,
-      services: [],
       createdAt: new Date().toISOString(),
     };
 
@@ -100,7 +101,6 @@ export const createClient = async (req, res) => {
       name: client.name,
       contact_manager: client.contact_manager,
       email: client.email,
-      services: client.services,
       owner: client.owner,
       self: `${req.protocol}://${req.get("host")}/clients/${clientId}`,
     });
@@ -112,18 +112,19 @@ export const createClient = async (req, res) => {
 };
 
 /**
- * GET /clients/:id - Retrieves a single client by ID.
+ * GET /clients/:id - Retrieves a single client and its assigned services.
  * Requires JWT authentication.
- * Verifies that the authenticated user is the owner of the requested client.
- * Returns a 403 Forbidden error if the user attempts to access a resource they do not own.
+ * Verifies that the authenticated user is the owner of the requested client and returns
+ * an object with client details and mapped service links.
  *
- * @param {Object} req - Express request object containing the client ID in params and user ID in auth.payload.
- * @param {Object} res - Express response object.
- * @returns {Object} 200 - Success with the client details and associated services
- * @returns {Object} 403 - Forbidden if the user is not the owner of the client
- * @returns {Object} 404 - Not Found if the specified client ID does not exist
- * @returns {Object} 406 - Not Acceptable if the client does not accept application/json
- * @returns {Object} 500 - Internal server error for database or system issues
+ * @param {Object} req - Express request object.
+ * @param {string} req.params.id - The unique ID of the client.
+ * @param {Object} req.auth - The authenticated user information.
+ * @returns {Object} 200 - Success: Returns client details and an array of linked services.
+ * @returns {Object} 403 - Forbidden: User does not own the client.
+ * @returns {Object} 404 - Not Found: Specified client ID does not exist.
+ * @returns {Object} 406 - Not Acceptable: Request does not accept 'application/json'.
+ * @returns {Object} 500 - Internal server error.
  */
 export const fetchClientById = async (req, res) => {
   // 406: Check Accept header
@@ -136,12 +137,13 @@ export const fetchClientById = async (req, res) => {
 
   // Get the ID from the URL path (/clients/123)
   const clientId = req.params.id;
+  const baseUrl = `${req.protocol}://${req.get("host")}`;
 
   try {
-    // Look for the client
+    // Fetch the aggregated data (Client + Services)
     const result = await getClient(clientId);
 
-    // 404: Cannot find client
+    //  404: Cannot find client
     if (!result.Item) {
       return res
         .status(404)
@@ -158,22 +160,21 @@ export const fetchClientById = async (req, res) => {
       });
     }
 
-    // Strip prefix for clean ID
-    const extractedClientId = client.EntityId.replace("CLIENT#", "");
-    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    // Get the services of this client
+    const services = await getClientServices(clientId);
 
     // Construct response
     res.status(200).json({
-      id: extractedClientId,
+      id: clientId,
       name: client.name,
       contact_manager: client.contact_manager,
       email: client.email,
       owner: client.owner,
-      services: (client.services || []).map((service) => ({
-        id: service.id,
-        self: `${baseUrl}/services/${service.id}`,
+      services: services.map((service) => ({
+        id: service.EntityId.replace("SERVICE#", ""),
+        self: `${baseUrl}/services/${service.EntityId.replace("SERVICE#", "")}`,
       })),
-      self: `${baseUrl}/clients/${extractedClientId}`,
+      self: `${baseUrl}/clients/${clientId}`,
     });
   } catch (error) {
     // 500: Unexpected errors ( connectivity, DynamoDB service issues)
@@ -188,9 +189,10 @@ export const fetchClientById = async (req, res) => {
  * * Retrieves the total count of clients for the user and a subset (limit 10)
  * of client records. Uses cursor-based pagination via the 'OwnerIndex' GSI
  * to ensure high performance and data isolation.
- * @param {Object} req - The Express request object.
- * @param {Object} req.auth.payload - The JWT claims, used to extract the 'sub' (userId).
- * @param {string} [req.query.cursor] - Base64 encoded 'LastEvaluatedKey' for pagination.
+ * @param {Object} req - Express request object.
+ * @param {string} req.params.id - The unique ID of the client.
+ * @param {Object} req.auth - The authenticated user information.
+ * @param {string} [req.query.cursor] - Base64 encoded "LastEvaluatedKey" for pagination.
  * @param {Object} res - The Express response object.
  * @returns {Object} 200 - { clients: Array, items: Number, next?: String }
  * @returns {Object} 406 - Error: "Client must accept application/json"
@@ -224,11 +226,6 @@ export const getPaginatedClients = async (req, res) => {
         contact_manager: item.contact_manager,
         email: item.email,
         owner: item.owner,
-        // Add the service IDs and their self links
-        services: (item.services || []).map((service) => ({
-          id: service.id,
-          self: `${baseUrl}/services/${service.id}`,
-        })),
         self: `${baseUrl}/clients/${clientId}`,
       };
     });
@@ -260,7 +257,9 @@ export const getPaginatedClients = async (req, res) => {
 /**
  * PATCH /clients/:id - Partially updates an existing client record.
  * Requires JWT authentication. Verifies that the authenticated user is the owner of the client.
- * @param {Object} req - Express request object containing "id" in params and updates in "body"
+ * @param {Object} req - Express request object.
+ * @param {string} req.params.id - The unique ID of the client.
+ * @param {Object} req.auth - The authenticated user information.
  * @returns {Object} 200 - Successful update with the modified client object.
  * @returns {Object} 400 - Bad Request: Unsupported attributes, empty body, or invalid email format.
  * @returns {Object} 403 - Forbidden: Unauthorized access or attempt to modify immutable fields (clientId).
@@ -366,7 +365,6 @@ export const updateClient = async (req, res) => {
       contact_manager: updated.contact_manager,
       email: updated.email,
       owner: updated.owner,
-      services: updated.services || [],
       self: `${req.protocol}://${req.get("host")}${req.baseUrl}/${extractedClientId}`,
     });
   } catch (error) {
@@ -394,7 +392,9 @@ export const updateClient = async (req, res) => {
  * PUT /clients/:id - Replaces an existing client record entirely.
  * Requires JWT authentication and verification that the authenticated user is the owner of the client.
  * Enforces a strict schema: the request body must contain exactly the name, contact_manager, and email fields.
- * @param {Object} req - Express request object containing "id" in params and the full client object in "body"
+ * @param {Object} req - Express request object.
+ * @param {string} req.params.id - The unique ID of the client.
+ * @param {Object} req.auth - The authenticated user information.
  * @returns {Object} 200 - Successful replacement with the updated client object.
  * @returns {Object} 400 - Bad Request: Missing required fields, unsupported attributes, or invalid email format.
  * @returns {Object} 403 - Forbidden: Unauthorized access or attempt to modify immutable fields (clientId).
@@ -492,7 +492,6 @@ export const replaceClient = async (req, res) => {
       contact_manager: updated.contact_manager,
       email: updated.email,
       owner: updated.owner,
-      services: updated.services || [],
       self: `${req.protocol}://${req.get("host")}${req.baseUrl}/${req.params.id}`,
     });
   } catch (error) {
@@ -504,16 +503,16 @@ export const replaceClient = async (req, res) => {
 /**
  * PUT /clients/:client_id/services/:service_id - Assigns a service to a client.
  * Requires JWT authentication and verification that the authenticated user is the owner of the client.
- * Performs a transaction to append the service to the client's service list
- * and set the service's clientId field.
- * * @param {Object} req - Express request object.
- * @param {Object} req.params - Contains "client_id" and "service_id".
- * @param {Object} req.auth - Authenticated user information from JWT.
- * @returns {void} 204 - Successful assignment (No Content).
+ * Verifies that the client and service exist, that the user owns the client,
+ * and that the service is available for assignment.
+ * @param {Object} req - Express request object.
+ * @param {string} req.params.id - The unique ID of the client.
+ * @param {Object} req.auth - The authenticated user information.
+ * @returns {void} 204 - Service successfully assigned.
  * @returns {Object} 401 - Unauthorized: Missing or invalid credentials.
- * @returns {Object} 403 - Forbidden: User does not own the client or the service is already assigned.
- * @returns {Object} 404 - Not Found: The specified client_id or service_id does not exist.
- * @returns {Object} 500 - Internal Server Error: Database failure or unexpected exception.
+ * @returns {Object} 403 - Forbidden: Ownership mismatch or service already assigned.
+ * @returns {Object} 404 - Not Found: The specified client or service does not exist.
+ * @returns {Object} 500 - Internal Server Error: Database failure.
  */
 export const assignService = async (req, res) => {
   const { client_id, service_id } = req.params;
@@ -545,31 +544,35 @@ export const assignService = async (req, res) => {
     }
 
     // 403: Check if service already assigned
-    if (serviceRes.Item.clientId !== null) {
+    if (serviceRes.Item.clientId) {
       return res
         .status(403)
         .json({ Error: "The service already has a client" });
     }
 
-    // Assign the service to this client and add this service to this
-    // client's services array
+    // Assign the service using the simplified function
     await assignServiceToClient(client_id, service_id);
 
     return res.status(204).end();
   } catch (error) {
     console.error("Assignment Error: ", error);
-    // Check if the ervice already has a client
-    if (error.name == "TransactionCanceledException") {
+
+    // 403: Check if service already assigned
+    if (error.name === "ConditionalCheckFailedException") {
       return res.status(403).json({
         Error: "The service already has a client",
       });
     }
-    // Handle generic Auth errors
+
+    // 401: No JWT provided
     if (error.name === "UnauthorizedError") {
       return res.status(401).json({
         Error:
           "The request object is missing credentials or credentials are invalid",
       });
     }
+
+    // 500: Server error
+    return res.status(500).json({ Error: "Internal server error" });
   }
 };
