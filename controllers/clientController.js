@@ -15,7 +15,10 @@ import {
   getClient,
   getClients,
   putClient,
+  assignServiceToClient,
 } from "../models/clientAws.js";
+
+import { getService } from "../models/serviceAws.js";
 
 /**
  * POST /clients - Creates a new client record and stores it in DynamoDB.
@@ -157,6 +160,7 @@ export const fetchClientById = async (req, res) => {
 
     // Strip prefix for clean ID
     const extractedClientId = client.EntityId.replace("CLIENT#", "");
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
 
     // Construct response
     res.status(200).json({
@@ -165,11 +169,11 @@ export const fetchClientById = async (req, res) => {
       contact_manager: client.contact_manager,
       email: client.email,
       owner: client.owner,
-      services: (client.services || []).map((serviceId) => ({
-        id: serviceId,
-        self: `${req.protocol}://${req.get("host")}/services/${serviceId}`,
+      services: (client.services || []).map((service) => ({
+        id: service.id,
+        self: `${baseUrl}/services/${service.id}`,
       })),
-      self: `${req.protocol}://${req.get("host")}${req.baseUrl}/${extractedClientId}`,
+      self: `${baseUrl}/clients/${extractedClientId}`,
     });
   } catch (error) {
     // 500: Unexpected errors ( connectivity, DynamoDB service issues)
@@ -206,6 +210,7 @@ export const getPaginatedClients = async (req, res) => {
   // Define pagination settings: how many items per "page"
   const limit = 10;
   const cursor = req.query.cursor;
+  const baseUrl = `${req.protocol}://${req.get("host")}`;
 
   try {
     // Get the count of clients for this user and the info for each client
@@ -219,8 +224,12 @@ export const getPaginatedClients = async (req, res) => {
         contact_manager: item.contact_manager,
         email: item.email,
         owner: item.owner,
-        services: item.services,
-        self: `${req.protocol}://${req.get("host")}/clients/${clientId}`,
+        // Add the service IDs and their self links
+        services: (item.services || []).map((service) => ({
+          id: service.id,
+          self: `${baseUrl}/services/${service.id}`,
+        })),
+        self: `${baseUrl}/clients/${clientId}`,
       };
     });
 
@@ -489,5 +498,78 @@ export const replaceClient = async (req, res) => {
   } catch (error) {
     console.error("PUT ERROR:", error);
     res.status(500).json({ Error: "Internal server error" });
+  }
+};
+
+/**
+ * PUT /clients/:client_id/services/:service_id - Assigns a service to a client.
+ * Requires JWT authentication and verification that the authenticated user is the owner of the client.
+ * Performs a transaction to append the service to the client's service list
+ * and set the service's clientId field.
+ * * @param {Object} req - Express request object.
+ * @param {Object} req.params - Contains "client_id" and "service_id".
+ * @param {Object} req.auth - Authenticated user information from JWT.
+ * @returns {void} 204 - Successful assignment (No Content).
+ * @returns {Object} 401 - Unauthorized: Missing or invalid credentials.
+ * @returns {Object} 403 - Forbidden: User does not own the client or the service is already assigned.
+ * @returns {Object} 404 - Not Found: The specified client_id or service_id does not exist.
+ * @returns {Object} 500 - Internal Server Error: Database failure or unexpected exception.
+ */
+export const assignService = async (req, res) => {
+  const { client_id, service_id } = req.params;
+  const userId = req.auth.payload.sub;
+
+  try {
+    // Get the service to assign to the client
+    const [clientRes, serviceRes] = await Promise.all([
+      getClient(client_id),
+      getService(service_id),
+    ]);
+
+    // 404: Client or service does not exist
+    if (!clientRes.Item)
+      return res
+        .status(404)
+        .json({ Error: "No client with this client_id exists" });
+
+    if (!serviceRes.Item)
+      return res
+        .status(404)
+        .json({ Error: "No service with this service_id exists" });
+
+    // 403: Check Ownership
+    if (userId !== clientRes.Item.owner) {
+      return res.status(403).json({
+        Error: "The user does not have access privileges to this client",
+      });
+    }
+
+    // 403: Check if service already assigned
+    if (serviceRes.Item.clientId !== null) {
+      return res
+        .status(403)
+        .json({ Error: "The service already has a client" });
+    }
+
+    // Assign the service to this client and add this service to this
+    // client's services array
+    await assignServiceToClient(client_id, service_id);
+
+    return res.status(204).end();
+  } catch (error) {
+    console.error("Assignment Error: ", error);
+    // Check if the ervice already has a client
+    if (error.name == "TransactionCanceledException") {
+      return res.status(403).json({
+        Error: "The service already has a client",
+      });
+    }
+    // Handle generic Auth errors
+    if (error.name === "UnauthorizedError") {
+      return res.status(401).json({
+        Error:
+          "The request object is missing credentials or credentials are invalid",
+      });
+    }
   }
 };
