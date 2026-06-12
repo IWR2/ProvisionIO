@@ -126,48 +126,45 @@ export const putClient = async (
 };
 
 /**
- * Assigns a service to a client by updating both records in DynamoDB.
- * Uses a TransactWriteCommand to ensure the service is assigned to the client
- * and the service's "clientId" attribute is updated only if currently unassigned.
- * @param {string} clientId - The unique ID of the client.
- * @param {string} serviceId - The unique ID of the service to be assigned.
- * @returns {Promise<Object>} - A promise that resolves with the DynamoDB transaction response.
+ * Links a specific service to a client. If the service is already taken,
+ * it will safely reject the request to prevent accidental overwriting of
+ * assignments.
+ *
+ * @param {string} clientId - The unique ID of the client who will own the service.
+ * @param {string} serviceId - The unique ID of the service we want to assign.
+ * @returns {Promise<Object>} - Confirms the update was successful or throws an error if blocked.
  */
 export const assignServiceToClient = async (clientId, serviceId) => {
-  // Append a service to the client's array
+  // Finds the service and assigns the clientId to that service if it is null
   return await docClient.send(
-    new TransactWriteCommand({
-      TransactItems: [
-        {
-          // Append the service id to the client's services array
-          Update: {
-            TableName: TABLE_NAME,
-            Key: { EntityId: `CLIENT#${clientId}`, EntityType: "CLIENT" },
-            UpdateExpression:
-              "SET #s = list_append(if_not_exists(#s, :empty), :newService)",
-            ExpressionAttributeNames: { "#s": "services" },
-            ExpressionAttributeValues: {
-              ":newService": [{ id: serviceId }],
-              ":empty": [],
-            },
-          },
-        },
-        {
-          // Assign the client ID only if it is currently null for a service
-          Update: {
-            TableName: TABLE_NAME,
-            Key: { EntityId: `SERVICE#${serviceId}`, EntityType: "SERVICE" },
-            // Assigns the client ID only if it is currently null
-            UpdateExpression: "SET clientId = :cid",
-            ConditionExpression:
-              "attribute_not_exists(clientId) OR clientId = :nullVal",
-            ExpressionAttributeValues: {
-              ":cid": clientId,
-              ":nullVal": null,
-            },
-          },
-        },
-      ],
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { EntityId: `SERVICE#${serviceId}`, EntityType: "SERVICE" },
+      UpdateExpression: "SET clientId = :cid",
+      ConditionExpression:
+        "attribute_not_exists(clientId) OR clientId = :nullVal",
+      ExpressionAttributeValues: {
+        ":cid": clientId,
+        ":nullVal": null,
+      },
     }),
   );
+};
+
+/**
+ * Retrieves all services currently assigned to a specific client.
+ *
+ * @param {string} clientId - The unique ID of the client whose services we want to find.
+ * @returns {Promise<Array>} - A list containing all service records matched to this client.
+ */
+export const getClientServices = async (clientId) => {
+  const result = await docClient.send(
+    new QueryCommand({
+      TableName: TABLE_NAME,
+      IndexName: "ClientServiceIndex",
+      KeyConditionExpression: "clientId = :cid",
+      ExpressionAttributeValues: { ":cid": clientId },
+    }),
+  );
+  return result.Items;
 };
