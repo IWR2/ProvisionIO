@@ -11,6 +11,7 @@ import {
   getPaginatedClients,
   updateClient,
   replaceClient,
+  assignService,
 } from "../controllers/clientController.js";
 
 const router = express.Router();
@@ -23,5 +24,6 @@ router.get("/", getPaginatedClients);
 
 router.patch("/:id", updateClient);
 router.put("/:id", replaceClient);
+router.put("/:client_id/services/:service_id", assignService);
 
 export default router;
