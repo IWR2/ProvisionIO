@@ -156,15 +156,17 @@ export const fetchServiceById = async (req, res) => {
     // Return 200 found service
     // Strips the "SERVICE#" prefix to return just the ID
     const extractedServiceId = service.EntityId.replace("SERVICE#", "");
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
 
     res.status(200).json({
       id: extractedServiceId,
       name: service.name,
       type: service.type,
       price: service.price,
-      client: service.clientId,
-      // Reconstructs the URL to point back to this specific resource.
-      self: `${req.protocol}://${req.get("host")}/services/${extractedServiceId}`,
+      // If service.clientId is undefined or null, this returns null
+      client: service.clientId || null,
+      // Reconstructs the URL to point back to this specific resource
+      self: `${baseUrl}/services/${extractedServiceId}`,
     });
   } catch (error) {
     // 500: Unexpected errors ( connectivity, DynamoDB service issues)
@@ -194,6 +196,7 @@ export const getPaginatedServices = async (req, res) => {
   // Define pagination settings: how many items per "page"
   const limit = 10;
   const cursor = req.query.cursor;
+  const baseUrl = `${req.protocol}://${req.get("host")}`;
 
   try {
     // Run two database lookups at the same time:
@@ -209,8 +212,9 @@ export const getPaginatedServices = async (req, res) => {
         name: item.name,
         type: item.type,
         price: item.price,
-        client: item.client,
-        self: `${req.protocol}://${req.get("host")}/services/${extractedServiceId}`,
+        // If service's clientId is undefined or null, this returns null
+        client: item.clientId || null,
+        self: `${baseUrl}/services/${extractedServiceId}`,
       };
     });
 
