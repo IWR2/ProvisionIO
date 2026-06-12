@@ -124,3 +124,50 @@ export const putClient = async (
     }),
   );
 };
+
+/**
+ * Assigns a service to a client by updating both records in DynamoDB.
+ * Uses a TransactWriteCommand to ensure the service is assigned to the client
+ * and the service's "clientId" attribute is updated only if currently unassigned.
+ * @param {string} clientId - The unique ID of the client.
+ * @param {string} serviceId - The unique ID of the service to be assigned.
+ * @returns {Promise<Object>} - A promise that resolves with the DynamoDB transaction response.
+ */
+export const assignServiceToClient = async (clientId, serviceId) => {
+  // Append a service to the client's array
+  return await docClient.send(
+    new TransactWriteCommand({
+      TransactItems: [
+        {
+          // Append the service id to the client's services array
+          Update: {
+            TableName: TABLE_NAME,
+            Key: { EntityId: `CLIENT#${clientId}`, EntityType: "CLIENT" },
+            UpdateExpression:
+              "SET #s = list_append(if_not_exists(#s, :empty), :newService)",
+            ExpressionAttributeNames: { "#s": "services" },
+            ExpressionAttributeValues: {
+              ":newService": [{ id: serviceId }],
+              ":empty": [],
+            },
+          },
+        },
+        {
+          // Assign the client ID only if it is currently null for a service
+          Update: {
+            TableName: TABLE_NAME,
+            Key: { EntityId: `SERVICE#${serviceId}`, EntityType: "SERVICE" },
+            // Assigns the client ID only if it is currently null
+            UpdateExpression: "SET clientId = :cid",
+            ConditionExpression:
+              "attribute_not_exists(clientId) OR clientId = :nullVal",
+            ExpressionAttributeValues: {
+              ":cid": clientId,
+              ":nullVal": null,
+            },
+          },
+        },
+      ],
+    }),
+  );
+};
