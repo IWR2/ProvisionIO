@@ -89,7 +89,6 @@ export const createService = async (req, res) => {
       name,
       type,
       price,
-      clientId: null, // Starts as null, this will be linked to a client later
       createdAt: now,
       updatedAt: now,
     };
