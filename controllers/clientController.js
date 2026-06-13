@@ -18,6 +18,7 @@ import {
   assignServiceToClient,
   getClientServices,
   unassignServiceFromClient,
+  deleteClientAndCleanup,
 } from "../models/clientAws.js";
 
 import { getService } from "../models/serviceAws.js";
@@ -26,7 +27,6 @@ import { getService } from "../models/serviceAws.js";
  * POST /clients - Creates a new client record and stores it in DynamoDB.
  * Requires JWT authentication.
  * @param {Object} req - Express request object.
- * @param {string} req.params.id - The unique ID of the client.
  * @param {Object} req.auth - The authenticated user information.
  * @returns {Object} 201 Created with the new client data and a self link
  * @returns {Object} 400 Bad Request for missing required attributes or extra/unsupported fields
@@ -74,16 +74,16 @@ export const createClient = async (req, res) => {
 
   try {
     // Generate unique ID and timestamp for the new client
-    const clientId = randomUUID();
-    const userId = req.auth.payload.sub;
+    const client_id = randomUUID();
+    const user_id = req.auth.payload.sub;
     const now = new Date().toISOString();
 
     // Create DynamoDB item with a unique ID and category label
     // EntityId: CLIENT#{id}, EntityType: CLIENT
     const client = {
-      EntityId: `CLIENT#${clientId}`,
+      EntityId: `CLIENT#${client_id}`,
       EntityType: "CLIENT",
-      owner: userId,
+      owner: user_id,
       name,
       contact_manager,
       email,
@@ -97,12 +97,12 @@ export const createClient = async (req, res) => {
 
     // Return 201 Created with the new client data and self link
     res.status(201).json({
-      id: clientId,
+      id: client_id,
       name: client.name,
       contact_manager: client.contact_manager,
       email: client.email,
       owner: client.owner,
-      self: `${req.protocol}://${req.get("host")}/clients/${clientId}`,
+      self: `${req.protocol}://${req.get("host")}/clients/${client_id}`,
     });
   } catch (error) {
     // 500: Unexpected errors ( connectivity, DynamoDB client issues)
@@ -112,12 +112,12 @@ export const createClient = async (req, res) => {
 };
 
 /**
- * GET /clients/:id - Retrieves a single client and its assigned services.
+ * GET /clients/:client_id - Retrieves a single client and its assigned services.
  * Requires JWT authentication.
  * Verifies that the authenticated user is the owner of the requested client and returns
  * an object with client details and mapped service links.
  * @param {Object} req - Express request object.
- * @param {string} req.params.id - The unique ID of the client.
+ * @param {string} req.params.client_id - The unique ID of the client.
  * @param {Object} req.auth - The authenticated user information.
  * @returns {Object} 200 - Success: Returns client details and an array of linked services.
  * @returns {Object} 403 - Forbidden: User does not own the client.
@@ -135,12 +135,12 @@ export const fetchClientById = async (req, res) => {
   }
 
   // Get the ID from the URL path (/clients/123)
-  const clientId = req.params.id;
+  const { client_id } = req.params;
   const baseUrl = `${req.protocol}://${req.get("host")}`;
 
   try {
     // Fetch the aggregated data (Client + Services)
-    const result = await getClient(clientId);
+    const result = await getClient(client_id);
 
     //  404: Cannot find client
     if (!result.Item) {
@@ -152,19 +152,19 @@ export const fetchClientById = async (req, res) => {
     const client = result.Item;
 
     // Security check
-    const userId = req.auth.payload.sub;
-    if (userId !== client.owner) {
+    const user_id = req.auth.payload.sub;
+    if (user_id !== client.owner) {
       return res.status(403).json({
         Error: "The user does not have access privileges to this client",
       });
     }
 
     // Get the services of this client
-    const services = await getClientServices(clientId);
+    const services = await getClientServices(client_id);
 
     // Construct response
     res.status(200).json({
-      id: clientId,
+      id: client_id,
       name: client.name,
       contact_manager: client.contact_manager,
       email: client.email,
@@ -173,7 +173,7 @@ export const fetchClientById = async (req, res) => {
         id: service.EntityId.replace("SERVICE#", ""),
         self: `${baseUrl}/services/${service.EntityId.replace("SERVICE#", "")}`,
       })),
-      self: `${baseUrl}/clients/${clientId}`,
+      self: `${baseUrl}/clients/${client_id}`,
     });
   } catch (error) {
     // 500: Unexpected errors ( connectivity, DynamoDB service issues)
@@ -207,7 +207,7 @@ export const getPaginatedClients = async (req, res) => {
   }
 
   // Get the user ID Bearer Token (JWT)
-  const userId = req.auth.payload.sub;
+  const user_id = req.auth.payload.sub;
   // Define pagination settings: how many items per "page"
   const limit = 10;
   const cursor = req.query.cursor;
@@ -215,17 +215,21 @@ export const getPaginatedClients = async (req, res) => {
 
   try {
     // Get the count of clients for this user and the info for each client
-    const [statsResult, clientResult] = await getClients(userId, limit, cursor);
+    const [statsResult, clientResult] = await getClients(
+      user_id,
+      limit,
+      cursor,
+    );
     // Format the clients
     const clients = clientResult.Items.map((item) => {
-      const clientId = item.EntityId.replace("CLIENT#", "");
+      const client_id = item.EntityId.replace("CLIENT#", "");
       return {
-        id: clientId,
+        id: client_id,
         name: item.name,
         contact_manager: item.contact_manager,
         email: item.email,
         owner: item.owner,
-        self: `${baseUrl}/clients/${clientId}`,
+        self: `${baseUrl}/clients/${client_id}`,
       };
     });
 
@@ -254,14 +258,14 @@ export const getPaginatedClients = async (req, res) => {
 };
 
 /**
- * PATCH /clients/:id - Partially updates an existing client record.
+ * PATCH /clients/:client_id - Partially updates an existing client record.
  * Requires JWT authentication. Verifies that the authenticated user is the owner of the client.
  * @param {Object} req - Express request object.
- * @param {string} req.params.id - The unique ID of the client.
+ * @param {string} req.params.client_id - The unique ID of the client.
  * @param {Object} req.auth - The authenticated user information.
  * @returns {Object} 200 - Successful update with the modified client object.
  * @returns {Object} 400 - Bad Request: Unsupported attributes, empty body, or invalid email format.
- * @returns {Object} 403 - Forbidden: Unauthorized access or attempt to modify immutable fields (clientId).
+ * @returns {Object} 403 - Forbidden: Unauthorized access or attempt to modify immutable fields (client_id).
  * @returns {Object} 404 - Not Found: The specified client_id does not exist.
  * @returns {Object} 406 - Not Acceptable: Incorrect Accept header.
  * @returns {Object} 415 - Unsupported Media Type: Incorrect Content-Type header.
@@ -283,13 +287,13 @@ export const updateClient = async (req, res) => {
       .json({ Error: "Client must accept application/json" });
   }
 
-  const clientId = req.params.id;
+  const { client_id } = req.params;
   const bodyKeys = Object.keys(req.body);
   const allowedUpdates = ["name", "contact_manager", "email"];
 
-  // 403: Prevent modifying clientId
-  if (bodyKeys.includes("clientId")) {
-    return res.status(403).json({ Error: "clientId cannot be modified" });
+  // 403: Prevent modifying client_id
+  if (bodyKeys.includes("client_id")) {
+    return res.status(403).json({ Error: "client_id cannot be modified" });
   }
 
   // 400: Check for unsupported attributes
@@ -314,7 +318,7 @@ export const updateClient = async (req, res) => {
 
   try {
     // Check if this client exists and ownership check
-    const result = await getClient(clientId);
+    const result = await getClient(client_id);
     if (!result.Item) {
       return res
         .status(404)
@@ -347,7 +351,7 @@ export const updateClient = async (req, res) => {
 
     // Patch this client
     const updateResponse = await putClient(
-      clientId,
+      client_id,
       updateExpression,
       expressionAttributes,
       expressionValues,
@@ -388,15 +392,15 @@ export const updateClient = async (req, res) => {
 };
 
 /**
- * PUT /clients/:id - Replaces an existing client record entirely.
+ * PUT /clients/:client_id - Replaces an existing client record entirely.
  * Requires JWT authentication and verification that the authenticated user is the owner of the client.
  * Enforces a strict schema: the request body must contain exactly the name, contact_manager, and email fields.
  * @param {Object} req - Express request object.
- * @param {string} req.params.id - The unique ID of the client.
+ * @param {string} req.params.client_id - The unique ID of the client.
  * @param {Object} req.auth - The authenticated user information.
  * @returns {Object} 200 - Successful replacement with the updated client object.
  * @returns {Object} 400 - Bad Request: Missing required fields, unsupported attributes, or invalid email format.
- * @returns {Object} 403 - Forbidden: Unauthorized access or attempt to modify immutable fields (clientId).
+ * @returns {Object} 403 - Forbidden: Unauthorized access or attempt to modify immutable fields (client_id).
  * @returns {Object} 404 - Not Found: The specified client_id does not exist.
  * @returns {Object} 406 - Not Acceptable: Incorrect Accept header.
  * @returns {Object} 415 - Unsupported Media Type: Incorrect Content-Type header.
@@ -418,13 +422,13 @@ export const replaceClient = async (req, res) => {
       .json({ Error: "Client must accept application/json" });
   }
 
-  const clientId = req.params.id;
+  const { client_id } = req.params;
   const bodyKeys = Object.keys(req.body);
   const requiredFields = ["name", "contact_manager", "email"];
 
-  // 403: Prevent modifying clientId
-  if (bodyKeys.includes("clientId")) {
-    return res.status(403).json({ Error: "clientId cannot be modified" });
+  // 403: Prevent modifying client_id
+  if (bodyKeys.includes("client_id")) {
+    return res.status(403).json({ Error: "client_id cannot be modified" });
   }
 
   // 400: Check for unsupported attributes
@@ -450,7 +454,7 @@ export const replaceClient = async (req, res) => {
 
   try {
     // 4. Fetch and Ownership Check
-    const result = await getClient(clientId);
+    const result = await getClient(client_id);
     if (!result.Item)
       return res
         .status(404)
@@ -476,7 +480,7 @@ export const replaceClient = async (req, res) => {
     };
 
     const updateResponse = await putClient(
-      req.params.id,
+      client_id,
       updateExpression,
       expressionAttributes,
       expressionValues,
@@ -491,7 +495,7 @@ export const replaceClient = async (req, res) => {
       contact_manager: updated.contact_manager,
       email: updated.email,
       owner: updated.owner,
-      self: `${req.protocol}://${req.get("host")}${req.baseUrl}/${req.params.id}`,
+      self: `${req.protocol}://${req.get("host")}${req.baseUrl}/${client_id}`,
     });
   } catch (error) {
     console.error("PUT ERROR:", error);
@@ -515,7 +519,7 @@ export const replaceClient = async (req, res) => {
  */
 export const assignService = async (req, res) => {
   const { client_id, service_id } = req.params;
-  const userId = req.auth.payload.sub;
+  const user_id = req.auth.payload.sub;
 
   try {
     // Get the service to assign to the client
@@ -536,7 +540,7 @@ export const assignService = async (req, res) => {
         .json({ Error: "No service with this service_id exists" });
 
     // 403: Check Ownership
-    if (userId !== clientRes.Item.owner) {
+    if (user_id !== clientRes.Item.owner) {
       return res.status(403).json({
         Error: "You do not have permission to modify this client",
       });
@@ -590,7 +594,7 @@ export const assignService = async (req, res) => {
  */
 export const unlinkService = async (req, res) => {
   const { client_id, service_id } = req.params;
-  const userId = req.auth.payload.sub;
+  const user_id = req.auth.payload.sub;
 
   try {
     const [clientRes, serviceRes] = await Promise.all([
@@ -609,7 +613,7 @@ export const unlinkService = async (req, res) => {
         .json({ Error: "No service with this service_id exists" });
 
     // 403: Check Ownership
-    if (userId !== clientRes.Item.owner) {
+    if (user_id !== clientRes.Item.owner) {
       return res.status(403).json({
         Error: "You do not have permission to modify this client",
       });
@@ -634,6 +638,61 @@ export const unlinkService = async (req, res) => {
       });
     }
 
+    return res.status(500).json({ Error: "Internal server error" });
+  }
+};
+
+/**
+ * DELETE /clients/:client_id - Deletes an existing client and unlinks all its assigned services.
+ * Requires JWT authentication and verification that the authenticated user is the owner of the client.
+ * @param {Object} req - Express request object.
+ * @param {string} req.params.client_id - The unique ID of the client.
+ * @param {Object} req.auth - The authenticated user information.
+ * @returns {void} 204 - Successful deletion.
+ * @returns {Object} 403 - Forbidden: Ownership mismatch.
+ * @returns {Object} 404 - Not Found: The specified client_id does not exist.
+ * @returns {Object} 409 - Conflict: Concurrent update failed (transaction cancelled).
+ * @returns {Object} 500 - Internal Server Error: Database failure.
+ */
+export const deleteClient = async (req, res) => {
+  const { client_id } = req.params;
+  const user_id = req.auth.payload.sub;
+
+  try {
+    const clientRes = await getClient(client_id);
+
+    // 404: Client does not exist
+    if (!clientRes.Item) {
+      return res
+        .status(404)
+        .json({ Error: "No client with this client_id exists" });
+    }
+
+    // 403: Check Ownership
+    if (clientRes.Item.owner !== user_id) {
+      return res.status(403).json({
+        Error: "The user does not have access privileges to this client",
+      });
+    }
+
+    // Get the services of this client
+    const services = await getClientServices(client_id);
+
+    // Delete this client and unlink all the services of this client
+    await deleteClientAndCleanup(user_id, client_id, services);
+
+    return res.status(204).end();
+  } catch (error) {
+    // Check if it's a DynamoDB Transaction Canceled error
+    if (error.name === "TransactionCanceledException") {
+      console.error("Transaction failed:", error.CancellationReasons);
+      return res.status(409).json({
+        Error:
+          "The operation failed due to a concurrent update. Please try again.",
+      });
+    }
+
+    console.error("Delete Error:", error);
     return res.status(500).json({ Error: "Internal server error" });
   }
 };
