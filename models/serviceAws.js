@@ -152,14 +152,11 @@ export const putService = async (
  * @param {string} serviceId - The unique ID of the service to remove (without the 'SERVICE#' prefix).
  * @returns {Promise<Object>}
  * The response object from DynamoDB confirming the transactional delete and update.
- * @todo Integrate Client cleanup: When client-service linking is implemented,
- * add a TransactItem to remove this serviceId from the associated client's record.
  * @source:
  * https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.UpdateExpressions.html#Expressions.UpdateExpressions.ADD
  */
 export const deleteService = async (serviceId) => {
   // Delete service + decrement global count
-  // TODO: Remove a service from a client's services array
   await docClient.send(
     new TransactWriteCommand({
       TransactItems: [

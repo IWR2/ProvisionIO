@@ -374,13 +374,8 @@ export const updateService = async (req, res) => {
 
 /**
  * DELETE /services/:id - Deletes a service and updates global service count.
- *
  * Uses a TransactWriteCommand to ensure the service is deleted and
  * the catalog count is decremented as an atomic unit.
- *
- * TODO: Integrate Client cleanup. When Clients are implemented, add a
- * TransactItem to remove this serviceId from the client's service list.
- *
  * @param {Object} req - Express request object containing 'id' in params
  * @param {Object} res - Express response object
  * @returns {Object} 204 - No Content (Success)

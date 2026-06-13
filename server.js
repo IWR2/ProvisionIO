@@ -136,7 +136,6 @@ app.get("/profile", requiresAuth(), (req, res) => {
 
 /**
  * Test protected endpoint to verify JWT authentication is working.
- * TODO: Remove this after real endpoints are built.
  * @param {String} req.headers.authorization - Bearer token (JWT from Auth0)
  * @returns {Object} JSON with success message and authenticated user ID.
  * @returns {Number} 200 - Success, token is valid.
@@ -149,86 +148,17 @@ app.get("/protected", checkJwt, (req, res) => {
   });
 });
 
-app.use("/", adminRoutes); // /init endpoints (admin)
+// /init endpoints (admin)
+app.use("/", adminRoutes);
 
 /**
  * Retrieves all registered users.
  */
 app.use("/users", usersRoutes);
 
-/**
- * TODO: POST /clients
- * Creates a new client associated with the authenticated user.
- */
 app.use("/clients", checkJwt, clientsRoutes);
 
-/**
- * TODO: GET /clients
- * Retrieves all clients owned by the authenticated user with pagination.
- */
-
-/**
- * TODO: GET /clients/:id
- * Retrieves a single client by ID if owned by the authenticated user.
- */
-
-/**
- * TODO: PUT /clients/:id
- * Replaces an existing client with all new attribute values.
- */
-
-/**
- * TODO: PATCH /clients/:id
- * Updates one or more attributes of an existing client.
- */
-
-/**
- * TODO: DELETE /clients/:id
- * Deletes an existing client and disassociates any services attached to it.
- */
-
-/**
- * TODO: POST /services
- * Creates a new service (cloud infrastructure product).
- */
 app.use("/services", serviceRoutes);
-
-/**
- * TODO: GET /services
- * Retrieves all services (unprotected, shows all services).
- */
-
-/**
- * TODO: GET /services/:id
- * Retrieves a single service by ID.
- */
-
-/**
- * TODO: PUT /services/:id
- * Replaces an existing service with all new attribute values.
- */
-
-/**
- * TODO: PATCH /services/:id
- * Updates one or more attributes of an existing service.
- */
-
-/**
- * TODO: DELETE /services/:id
- * Deletes a service. Disassociates any client using this service.
- */
-
-/**
- * TODO: PUT /clients/:clientId/services/:serviceId
- * Assigns a service to a client. Updates both the client's services array
- * and the service's client reference.
- */
-
-/**
- * TODO: DELETE /clients/:clientId/services/:serviceId
- * Removes a service from a client. Updates both the client's services array
- * and the service's client reference (sets to null).
- */
 
 /**
  * Intercepts authentication errors thrown. Catches
