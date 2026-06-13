@@ -12,6 +12,7 @@ import {
   updateClient,
   replaceClient,
   assignService,
+  unlinkService,
 } from "../controllers/clientController.js";
 
 const router = express.Router();
@@ -25,5 +26,6 @@ router.get("/", getPaginatedClients);
 router.patch("/:id", updateClient);
 router.put("/:id", replaceClient);
 router.put("/:client_id/services/:service_id", assignService);
+router.delete("/:client_id/services/:service_id", unlinkService);
 
 export default router;
