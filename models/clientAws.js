@@ -129,7 +129,6 @@ export const putClient = async (
  * Links a specific service to a client. If the service is already taken,
  * it will safely reject the request to prevent accidental overwriting of
  * assignments.
- *
  * @param {string} clientId - The unique ID of the client who will own the service.
  * @param {string} serviceId - The unique ID of the service we want to assign.
  * @returns {Promise<Object>} - Confirms the update was successful or throws an error if blocked.
@@ -153,7 +152,6 @@ export const assignServiceToClient = async (clientId, serviceId) => {
 
 /**
  * Retrieves all services currently assigned to a specific client.
- *
  * @param {string} clientId - The unique ID of the client whose services we want to find.
  * @returns {Promise<Array>} - A list containing all service records matched to this client.
  */
@@ -167,4 +165,22 @@ export const getClientServices = async (clientId) => {
     }),
   );
   return result.Items;
+};
+
+/**
+ * Unlinks a service from its currently assigned client.
+ * @param {string} serviceId - The unique ID of the service to release.
+ * @returns {Promise<Object>} - Confirmation of the successful unlinking.
+ */
+export const unassignServiceFromClient = async (serviceId) => {
+  return await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { EntityId: `SERVICE#${serviceId}`, EntityType: "SERVICE" },
+      // Delete the clientId attribute, making it "attribute_not_exists"
+      UpdateExpression: "REMOVE clientId",
+      // Only unassign if a clientId actually exists
+      ConditionExpression: "attribute_exists(clientId)",
+    }),
+  );
 };
