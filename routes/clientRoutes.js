@@ -13,6 +13,7 @@ import {
   replaceClient,
   assignService,
   unlinkService,
+  deleteClient,
 } from "../controllers/clientController.js";
 
 const router = express.Router();
@@ -20,12 +21,13 @@ const router = express.Router();
 // Client CRUD operations
 router.post("/", createClient);
 
-router.get("/:id", fetchClientById);
+router.get("/:client_id", fetchClientById);
 router.get("/", getPaginatedClients);
 
-router.patch("/:id", updateClient);
-router.put("/:id", replaceClient);
+router.patch("/:client_id", updateClient);
+router.put("/:client_id", replaceClient);
 router.put("/:client_id/services/:service_id", assignService);
 router.delete("/:client_id/services/:service_id", unlinkService);
+router.delete("/:client_id", deleteClient);
 
 export default router;
