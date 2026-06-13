@@ -4,6 +4,7 @@ import {
   GetCommand,
   QueryCommand,
   UpdateCommand,
+  DeleteCommand,
 } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLE_NAME } from "../utils/dynamodb.js";
 
@@ -17,7 +18,7 @@ import { docClient, TABLE_NAME } from "../utils/dynamodb.js";
  */
 export const postClient = async (client) => {
   // Use the owner from the client object
-  const userId = client.owner;
+  const user_id = client.owner;
   await docClient.send(
     new TransactWriteCommand({
       TransactItems: [
@@ -27,7 +28,7 @@ export const postClient = async (client) => {
         {
           Update: {
             TableName: TABLE_NAME,
-            Key: { EntityId: `USER#${userId}`, EntityType: "CLIENT_COUNT" },
+            Key: { EntityId: `USER#${user_id}`, EntityType: "CLIENT_COUNT" },
             // Use SET + if_not_exists for safe initialization
             UpdateExpression: "SET #c = if_not_exists(#c, :zero) + :inc",
             ExpressionAttributeNames: { "#c": "count" },
@@ -64,21 +65,21 @@ export const getClient = async (clientId) => {
  * (a cursor) to fetch the next page.
  * 1. Fetches the "CLIENT_COUNT" record for the user to determine the total items available.
  * 2. Queries the "OwnerIndex" GSI to retrieve a page of client records.
- * @param {string} userId - The owner ID to filter clients by.
+ * @param {string} user_id - The owner ID to filter clients by.
  * @param {number} limit - The maximum number of items to return in the query.
  * @param {string} [cursor] - Base64 encoded string representing the ExclusiveStartKey from a previous page.
  * @returns {Promise<[Object, Object]>} An array containing [StatsResult, ClientResult].
  */
-export const getClients = async (userId, limit, cursor) => {
+export const getClients = async (user_id, limit, cursor) => {
   // Run two database lookups at the same time:
   // Get the count from this user
   // Get the current page of clients using GSI
   return await Promise.all([
-    // Get total client count for this userId
+    // Get total client count for this user_id
     docClient.send(
       new GetCommand({
         TableName: TABLE_NAME,
-        Key: { EntityId: `USER#${userId}`, EntityType: "CLIENT_COUNT" },
+        Key: { EntityId: `USER#${user_id}`, EntityType: "CLIENT_COUNT" },
       }),
     ),
     // Get the paginated clients for this owner using the OwnerIndex
@@ -88,7 +89,7 @@ export const getClients = async (userId, limit, cursor) => {
         IndexName: "OwnerIndex",
         KeyConditionExpression: "#o = :userId",
         ExpressionAttributeNames: { "#o": "owner" },
-        ExpressionAttributeValues: { ":userId": userId },
+        ExpressionAttributeValues: { ":userId": user_id },
         Limit: limit,
         ExclusiveStartKey: cursor
           ? JSON.parse(Buffer.from(cursor, "base64").toString())
@@ -182,5 +183,52 @@ export const unassignServiceFromClient = async (serviceId) => {
       // Only unassign if a clientId actually exists
       ConditionExpression: "attribute_exists(clientId)",
     }),
+  );
+};
+
+/**
+ * Atomically deletes a client, decrements the user's client count,
+ * and unlinks any services associated with that client.
+ * @param {string} user_id - The ID of the owner.
+ * @param {string} client_id - The ID of the client to be deleted.
+ * @param {Array} services - List of service objects currently assigned to this client.
+ */
+export const deleteClientAndCleanup = async (user_id, client_id, services) => {
+  // Create a list of transact write commands to delete a client and to decrement the count of clients for this user
+  const transactItems = [
+    // Delete the client record
+    {
+      Delete: {
+        TableName: TABLE_NAME,
+        Key: { EntityId: `CLIENT#${client_id}`, EntityType: "CLIENT" },
+        ConditionExpression: "attribute_exists(EntityId)",
+      },
+    },
+    // Decrement the user's client count
+    {
+      Update: {
+        TableName: TABLE_NAME,
+        Key: { EntityId: `USER#${user_id}`, EntityType: "CLIENT_COUNT" },
+        UpdateExpression: "SET #c = #c - :dec",
+        ExpressionAttributeNames: { "#c": "count" },
+        ExpressionAttributeValues: { ":dec": 1 },
+      },
+    },
+  ];
+
+  // Append a list of services to be removed belonging to this client
+  // Unlink each associated service
+  services.forEach((service) => {
+    transactItems.push({
+      Update: {
+        TableName: TABLE_NAME,
+        Key: { EntityId: service.EntityId, EntityType: "SERVICE" },
+        UpdateExpression: "REMOVE clientId",
+      },
+    });
+  });
+
+  await docClient.send(
+    new TransactWriteCommand({ TransactItems: transactItems }),
   );
 };
