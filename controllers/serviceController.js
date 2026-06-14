@@ -16,6 +16,7 @@ import {
   getService,
   getServices,
   patchService,
+  putService,
   deleteService,
 } from "../models/serviceAws.js";
 
@@ -78,13 +79,13 @@ export const createService = async (req, res) => {
 
   try {
     // Generate unique ID and timestamp for the new service
-    const serviceId = randomUUID();
+    const service_id = randomUUID();
     const now = new Date().toISOString();
 
     // Create DynamoDB item with a unique ID and category label
     // EntityId: SERVICE#{id}, EntityType: SERVICE
     const service = {
-      EntityId: `SERVICE#${serviceId}`,
+      EntityId: `SERVICE#${service_id}`,
       EntityType: "SERVICE",
       name,
       type,
@@ -100,12 +101,12 @@ export const createService = async (req, res) => {
 
     // Return 201 Created with the new service data and self link
     res.status(201).json({
-      id: serviceId,
+      id: service_id,
       name,
       type,
       price,
       client: null,
-      self: `${req.protocol}://${req.get("host")}/services/${serviceId}`,
+      self: `${req.protocol}://${req.get("host")}/services/${service_id}`,
     });
   } catch (error) {
     // 500: Unexpected errors ( connectivity, DynamoDB service issues)
@@ -137,11 +138,11 @@ export const fetchServiceById = async (req, res) => {
   }
 
   // Get the ID from the URL path (/services/123)
-  const serviceId = req.params.id;
+  const service_id = req.params.service_id;
 
   try {
-    // Look for a service that matches the serviceId
-    const result = await getService(serviceId);
+    // Look for a service that matches the service_id
+    const result = await getService(service_id);
 
     // 404: Cannot find service
     if (!result.Item) {
@@ -268,17 +269,17 @@ export const updateService = async (req, res) => {
       .json({ Error: "Client must accept application/json" });
   }
 
-  const serviceId = req.params.id;
+  const service_id = req.params.service_id;
   const bodyKeys = Object.keys(req.body);
   const allowedUpdates = ["name", "type", "price"];
 
   // 403: Prevent modifying serviceId and clientId
-  if (bodyKeys.includes("id")) {
-    return res.status(403).json({ Error: "serviceId cannot be modified" });
+  if (bodyKeys.includes("service_id")) {
+    return res.status(403).json({ Error: "service_id cannot be modified" });
   }
 
-  if (bodyKeys.includes("clientId")) {
-    return res.status(403).json({ Error: "clientId cannot be modified" });
+  if (bodyKeys.includes("client_id")) {
+    return res.status(403).json({ Error: "client_id cannot be modified" });
   }
 
   // 400: Check for unsupported attributes
@@ -332,7 +333,7 @@ export const updateService = async (req, res) => {
 
     // Patch this service
     const updateResponse = await patchService(
-      req.params.id,
+      service_id,
       updateExpression,
       expressionAttributes,
       expressionValues,
@@ -373,6 +374,92 @@ export const updateService = async (req, res) => {
 };
 
 /**
+ * PUT /services/:service_id - Replaces an existing service record entirely.
+ * @param {Object} req - Express request object.
+ * @returns {Object} 200 - Successful replacement.
+ */
+export const replaceService = async (req, res) => {
+  // 415: Check Content-Type
+  if (req.get("content-type") !== "application/json") {
+    return res
+      .status(415)
+      .json({ Error: "Server only accepts application/json data" });
+  }
+
+  // 406: Check Accept header
+  const accepts = req.accepts(["application/json"]);
+  if (!accepts) {
+    return res
+      .status(406)
+      .json({ Error: "Client must accept application/json" });
+  }
+
+  const { service_id } = req.params;
+  const bodyKeys = Object.keys(req.body);
+  const requiredFields = ["name", "type", "price"];
+
+  // 403: Prevent modifying service_id
+  if (bodyKeys.includes("service_id")) {
+    return res.status(403).json({ Error: "service_id cannot be modified" });
+  }
+
+  // 400: Check for unsupported attributes
+  const unsupported = bodyKeys.filter((key) => !requiredFields.includes(key));
+  if (unsupported.length > 0) {
+    return res.status(400).json({
+      Error: `The request object includes unsupported attributes: ${unsupported.join(", ")}`,
+    });
+  }
+
+  // 400: Check for all required fields
+  const missing = requiredFields.filter((field) => !req.body[field]);
+  if (missing.length > 0) {
+    return res
+      .status(400)
+      .json({ Error: `Missing required fields: ${missing.join(", ")}` });
+  }
+
+  // 400: Price validation
+  if (typeof req.body.price !== "number" || req.body.price < 0) {
+    return res
+      .status(400)
+      .json({ Error: "Price must be a non-negative number" });
+  }
+
+  // 400: Ensure the price is a valid number
+  if (
+    req.body.price !== undefined &&
+    (typeof req.body.price !== "number" || req.body.price < 0)
+  ) {
+    return res
+      .status(400)
+      .json({ Error: "The price attribute must be a non-negative number" });
+  }
+
+  try {
+    // Replace the service's name, type, price, and client
+    const updateResponse = await putService(service_id, req.body);
+    const updated = updateResponse.Attributes;
+    const extractedServiceId = updated.EntityId.replace("SERVICE#", "");
+
+    res.status(200).json({
+      id: extractedServiceId,
+      name: updated.name,
+      type: updated.type,
+      price: updated.price,
+      client: updated.clientId,
+      self: `${req.protocol}://${req.get("host")}/services/${extractedServiceId}`,
+    });
+  } catch (error) {
+    if (error.name === "ConditionalCheckFailedException") {
+      return res.status(404).json({ Error: "Service not found" });
+    }
+    console.error("PUT ERROR:", error);
+    res.status(500).json({ Error: "Internal server error" });
+  }
+};
+
+/**
  * DELETE /services/:id - Deletes a service and updates global service count.
  * Uses a TransactWriteCommand to ensure the service is deleted and
  * the catalog count is decremented as an atomic unit.
@@ -392,11 +479,11 @@ export const removeService = async (req, res) => {
       .json({ Error: "Client must accept application/json" });
   }
 
-  const serviceId = req.params.id;
+  const service_id = req.params.service_id;
 
   try {
     // Delete service and  decrement global service count
-    await deleteService(serviceId);
+    await deleteService(service_id);
 
     // 204: Success (No content returned)
     res.status(204).end();
