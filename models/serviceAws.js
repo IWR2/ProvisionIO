@@ -51,18 +51,18 @@ export const postService = async (service) => {
 
 /**
  * Retrieves a single service record by its unique ID.
- * * @param {string} serviceId - The unique identifier of the service (without the "SERVICE#" prefix).
+ * * @param {string} service_id - The unique identifier of the service (without the "SERVICE#" prefix).
  * @returns {Promise<Object>} The DynamoDB response object containing the service item.
  * @source: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/getting-started-step-3.html
  */
-export const getService = async (serviceId) => {
+export const getService = async (service_id) => {
   return await docClient.send(
     // Look for a service that matches:
     // EntityId: The unique ID of the service (prefixed with "SERVICE#").
     // EntityType: The "SERVICE" label assigned when the service was created
     new GetCommand({
       TableName: TABLE_NAME,
-      Key: { EntityId: `SERVICE#${serviceId}`, EntityType: "SERVICE" },
+      Key: { EntityId: `SERVICE#${service_id}`, EntityType: "SERVICE" },
     }),
   );
 };
@@ -114,7 +114,7 @@ export const getServices = async (limit, cursor) => {
 
 /**
  * Partially updates an existing service record in DynamoDB.
- * @param {string} serviceId - The unique ID of the service.
+ * @param {string} service_id - The unique ID of the service.
  * @param {string} updateExpression - The string defining which fields to update.
  * @param {Object} expressionAttributes - Map of placeholders to attribute names.
  * @param {Object} expressionValues - Map of placeholders to new attribute values.
@@ -125,7 +125,7 @@ export const getServices = async (limit, cursor) => {
  * https://github.com/awsdocs/aws-doc-sdk-examples/blob/main/javascriptv3/example_code/dynamodb/scenarios/basic.js
  */
 export const patchService = async (
-  serviceId,
+  service_id,
   updateExpression,
   expressionAttributes,
   expressionValues,
@@ -133,7 +133,7 @@ export const patchService = async (
   return await docClient.send(
     new UpdateCommand({
       TableName: TABLE_NAME,
-      Key: { EntityId: `SERVICE#${serviceId}`, EntityType: "SERVICE" },
+      Key: { EntityId: `SERVICE#${service_id}`, EntityType: "SERVICE" },
       UpdateExpression: updateExpression, // Instruction expression
       ExpressionAttributeNames: expressionAttributes, // Dictionary to translate # placeholders
       ExpressionAttributeValues: expressionValues, // Dictionary to translate : placeholders
@@ -148,14 +148,43 @@ export const patchService = async (
 };
 
 /**
+ * Replaces an existing service record entirely.
+ * @param {string} service_id - The unique ID of the service.
+ * @param {Object} serviceData - The complete service object to replace the old one.
+ * @returns {Promise<Object>} - The updated service item.
+ */
+export const putService = async (service_id, serviceData) => {
+  return await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { EntityId: `SERVICE#${service_id}`, EntityType: "SERVICE" },
+      UpdateExpression: "SET #n = :n, #t = :t, #p = :p, updatedAt = :now",
+      ExpressionAttributeNames: {
+        "#n": "name",
+        "#t": "type",
+        "#p": "price",
+      },
+      ExpressionAttributeValues: {
+        ":n": serviceData.name,
+        ":t": serviceData.type,
+        ":p": serviceData.price,
+        ":now": new Date().toISOString(),
+      },
+      ConditionExpression: "attribute_exists(EntityId)",
+      ReturnValues: "ALL_NEW",
+    }),
+  );
+};
+
+/**
  * Atomically deletes a service and decrements the global service count.
- * @param {string} serviceId - The unique ID of the service to remove (without the 'SERVICE#' prefix).
+ * @param {string} service_id - The unique ID of the service to remove (without the 'SERVICE#' prefix).
  * @returns {Promise<Object>}
  * The response object from DynamoDB confirming the transactional delete and update.
  * @source:
  * https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.UpdateExpressions.html#Expressions.UpdateExpressions.ADD
  */
-export const deleteService = async (serviceId) => {
+export const deleteService = async (service_id) => {
   // Delete service + decrement global count
   await docClient.send(
     new TransactWriteCommand({
@@ -163,7 +192,7 @@ export const deleteService = async (serviceId) => {
         {
           Delete: {
             TableName: TABLE_NAME,
-            Key: { EntityId: `SERVICE#${serviceId}`, EntityType: "SERVICE" },
+            Key: { EntityId: `SERVICE#${service_id}`, EntityType: "SERVICE" },
             // Check if this service exists
             ConditionExpression: "attribute_exists(EntityId)",
           },
