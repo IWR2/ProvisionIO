@@ -10,6 +10,7 @@ import {
   fetchServiceById,
   getPaginatedServices,
   updateService,
+  replaceService,
   removeService,
 } from "../controllers/serviceController.js";
 
@@ -18,11 +19,13 @@ const router = express.Router();
 // Service CRUD operations
 router.post("/", createService);
 
-router.get("/:id", fetchServiceById);
+router.get("/:service_id", fetchServiceById);
 router.get("/", getPaginatedServices);
 
-router.patch("/:id", updateService);
-router.delete("/:id", removeService);
+router.patch("/:service_id", updateService);
+router.put("/:service_id", replaceService);
+
+router.delete("/:service_id", removeService);
 
 // Method Not Allowed handlers (for root path only)
 router.put("/", (req, res) => {
