@@ -30,4 +30,20 @@ router.put("/:client_id/services/:service_id", assignService);
 router.delete("/:client_id/services/:service_id", unlinkService);
 router.delete("/:client_id", deleteClient);
 
+// Method Not Allowed handlers (for root path only)
+router.put("/", (req, res) => {
+  res.set("Accept", "PUT");
+  res.status(405).json({ Error: "Method not allowed" });
+});
+
+router.patch("/", (req, res) => {
+  res.set("Accept", "PATCH");
+  res.status(405).json({ Error: "Method not allowed" });
+});
+
+router.delete("/", (req, res) => {
+  res.set("Accept", "DELETE");
+  res.status(405).json({ Error: "Method not allowed" });
+});
+
 export default router;
