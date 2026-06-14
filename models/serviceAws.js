@@ -124,7 +124,7 @@ export const getServices = async (limit, cursor) => {
  * https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Expressions.ExpressionAttributeValues.html
  * https://github.com/awsdocs/aws-doc-sdk-examples/blob/main/javascriptv3/example_code/dynamodb/scenarios/basic.js
  */
-export const putService = async (
+export const patchService = async (
   serviceId,
   updateExpression,
   expressionAttributes,

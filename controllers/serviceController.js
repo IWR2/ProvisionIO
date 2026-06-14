@@ -15,7 +15,7 @@ import {
   postService,
   getService,
   getServices,
-  putService,
+  patchService,
   deleteService,
 } from "../models/serviceAws.js";
 
@@ -331,7 +331,7 @@ export const updateService = async (req, res) => {
     });
 
     // Patch this service
-    const updateResponse = await putService(
+    const updateResponse = await patchService(
       req.params.id,
       updateExpression,
       expressionAttributes,
