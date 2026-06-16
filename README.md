@@ -101,7 +101,7 @@ This step is required to receive an access_token that works with your API:
 3. Name your API
 4. Copy your Identifier (copy to .env as AUTH0_AUDIENCE)
 5. Click Create
-Step 6.3: Enable RBAC and Add Permissions
+Step 6.3: Enable RBAC and Add Permissions to your API
 1. Go to your API → Settings Tab
 2. Scroll down to RBAC Settings
 3. Toggle Enable RBAC ON
@@ -109,8 +109,7 @@ Step 6.3: Enable RBAC and Add Permissions
 5. Click Save
 6. Click on the Permissions tab
 7. Click Add a Permission:
-* Permission: read:users
-* Description: Allows retrieving the list of all users
+* Permission: admin:access, admin:table_create, admin:table_deletion, read:users, delete:users
 8. Click Add
 Step 6.4: Create Admin Role and Assign Permission
 1. Go to User Management → Roles
@@ -122,20 +121,24 @@ Step 6.4: Create Admin Role and Assign Permission
 7. Click Add Permissions
 8. Select your ProvisionIO API and check read:users
 9. Click Add Permissions
-Step 6.5 Assign Admin Role to Your User
-1. Go to User Management → Users
-2. Click on your user account
-3. Go to the Roles Tab
-4. Click Assign Roles
-5. Select Admin and click Assign
+Step 6.5 Assign Admin Role and Permissions to Your Admin User Account
+1. Click on the Permissions Tab
+2. Select your API.
+3. Assign Permissions.
+4. Assign the admin account with: admin:access, admin:table_create, admin:table_deletion, read:users, delete:users
+5. Go to User Management → Users
+6. Click on your user account
+7. Go to the Roles Tab
+8. Click Assign Roles
+9. Select Admin and click Assign
 Step 6.6 Authorize Web App to Access Your API
 This step is required to receive an access_token that works with your API:
 1. Go to Auth0 Dashboard → Applications → APIs
 2. Click on your API
 3. Click on API Access
 4. Click edit on your API
-5. Click on Client Acess
-6. Grant Acess
+5. Click on Client Access
+6. Grant Access
 7. Select read:users
 8. Click Save
 Step 6.7 Grant Auth0 Management API to access your API
