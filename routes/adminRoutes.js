@@ -11,16 +11,10 @@ import { createTable, deleteTable } from "../controllers/adminController.js";
 
 const router = express.Router();
 
-/**
- * POST /init - Creates the DynamoDB table.
- * Run this ONCE before using any other endpoints.
- */
-router.post("/init", createTable);
+// Creates the DynamoDB table
+router.post("/", createTable);
 
-/**
- * DELETE /init - Deletes the DynamoDB table and ALL its data.
- * Use with caution. This action cannot be undone.
- */
-router.delete("/init", deleteTable);
+// Deletes the DynamoDB table and ALL its data.
+router.delete("/", deleteTable);
 
 export default router;
