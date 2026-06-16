@@ -46,7 +46,7 @@ const router = express.Router();
  *   ]
  * }
  */
-router.get("/", checkJwt, getAllUsers);
+router.get("/", getAllUsers);
 
 /**
  * POST /users Method not allowed.
