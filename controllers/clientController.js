@@ -331,7 +331,7 @@ export const updateClient = async (req, res) => {
       });
     }
 
-    // 3. Construct Update Expression
+    // Create Update Expression
     // Maps #placeholders to field names ("#fName" -> "name")
     const expressionAttributes = {};
     // Maps :placeholders to the new values (":name" -> "Dott Toward")
