@@ -1,6 +1,6 @@
 // services/auth.js
 
-import { auth as jwtAuth } from "express-oauth2-jwt-bearer";
+import { auth as jwtAuth, claimIncludes } from "express-oauth2-jwt-bearer";
 
 /**
  * JWT Validation Middleware
@@ -19,3 +19,6 @@ export const checkJwt = jwtAuth({
   audience: process.env.AUTH0_AUDIENCE,
   tokenSigningAlg: "RS256",
 });
+
+// To check user's read and delete users permission
+export { claimIncludes };
