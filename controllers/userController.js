@@ -44,8 +44,8 @@ const management = new ManagementClient({
  * // Response (200 OK)
  * {
  *   "results": [
- *     { "id": "auth0|123456", "subject": "auth0|123456" },
- *     { "id": "auth0|789012", "subject": "auth0|789012" }
+ *     { "id": "auth0|123456", },
+ *     { "id": "auth0|789012" }
  *   ]
  * }
  *
