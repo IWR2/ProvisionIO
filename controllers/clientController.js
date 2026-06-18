@@ -72,6 +72,11 @@ export const createClient = async (req, res) => {
     });
   }
 
+  // 400: Email format validation
+  if (req.body.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(req.body.email)) {
+    return res.status(400).json({ Error: "Invalid email format" });
+  }
+
   try {
     // Generate unique ID and timestamp for the new client
     const client_id = randomUUID();
