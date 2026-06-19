@@ -50,11 +50,7 @@ markdown_extensions:
 
 nav:
   - Overview: index.md
-  - Data Models:
-      - Overview: model.md
-      - User: model/user.md
-      - Clients: model/clients.md
-      - Services: model/services.md
+  - Data Model: model.md
   - API Reference:
       - API Directory: api/endpoints.md
       - Admin Endpoints: api/admin.md
