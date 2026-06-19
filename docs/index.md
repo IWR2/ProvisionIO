@@ -4,6 +4,7 @@ Welcome to the official documentation for the **ProvisionIO REST API**. This RES
 
 ## API Overview
 The ProvisionIO API allows authenticated users to:
+
 * **Manage Clients:** Create, track, and update client entities.
 * **Manage Services:** Handle cloud service resources and link them to specific clients.
 * **Maintain Ownership:** Ensure strict data privacy through Auth0 identity verification.
