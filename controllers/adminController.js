@@ -27,8 +27,9 @@ import { client, TABLE_NAME } from "../utils/dynamodb.js";
  * https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GSI.html#GSI.Projections
  * https://youtu.be/BkEu7zBWge8
  * @returns {Object} JSON message indicating table creation status.
- * @returns {Number} 200 - Table created successfully or already exists.
+ * @returns {Number} 201 - Table created successfully or already exists.
  * @returns {Number} 400 - Invalid table configuration (wrong key schema).
+ * @returns {Number} 409 - Table already exists.
  * @returns {Number} 500 - Unexpected server error.
  */
 export const createTable = async (req, res) => {
@@ -93,12 +94,12 @@ export const createTable = async (req, res) => {
     // Send the command to DynamoDB to create the table
     await client.send(command);
     console.log(`Table ${TABLE_NAME} created successfully with OwnerIndex`);
-    res.json({ message: `${TABLE_NAME} created successfully` });
+    res.status(201).json({ message: `${TABLE_NAME} created successfully` });
   } catch (error) {
     // Handle table already exists
     if (error.name === "ResourceInUseException") {
       console.log(`Table ${TABLE_NAME} already exists`);
-      res.json({ message: `${TABLE_NAME} already exists` });
+      res.status(409).json({ message: `${TABLE_NAME} already exists` });
       // Handle validation errors (schema mismatch, missing required parameters)
     } else if (error.name === "ValidationException") {
       console.error(`Validation error: ${error.message}`);
@@ -119,8 +120,7 @@ export const createTable = async (req, res) => {
  * DELETE /init - Deletes the DynamoDB table and ALL its data.
  * Use with caution. This action cannot be undone.
  *
- * @returns {Object} JSON message indicating deletion status.
- * @returns {Number} 200 - Table deleted successfully.
+ * @returns {Number} 204 - Table deleted successfully.
  * @returns {Number} 404 - Table does not exist.
  * @returns {Number} 500 - Unexpected server error.
  */
@@ -131,7 +131,7 @@ export const deleteTable = async (req, res) => {
     // Send the command to DynamoDB to delete the table
     await client.send(command);
     console.log(`Table ${TABLE_NAME} deleted successfully`);
-    res.json({ message: `${TABLE_NAME} deleted successfully` });
+    res.status(204).send();
   } catch (error) {
     // Handle if the table does not exist
     if (error.name === "ResourceNotFoundException") {
