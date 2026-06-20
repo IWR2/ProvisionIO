@@ -54,8 +54,8 @@ nav:
   - API Reference:
       - API Directory: api/endpoints.md
       - Admin Endpoints: api/admin.md
-      - Client Management: api/clients.md
-      - Service Management: api/services.md
+      - Client Endpoints: api/clients.md
+      - Service Endpoints: api/services.md
       - Other Endpoints: api/other.md
   - Guides:
       - Global Behaviors: guides/behaviors.md
