@@ -398,9 +398,13 @@ export const replaceService = async (req, res) => {
   const bodyKeys = Object.keys(req.body);
   const requiredFields = ["name", "type", "price"];
 
-  // 403: Prevent modifying service_id
+  // 403: Prevent modifying serviceId and clientId
   if (bodyKeys.includes("service_id")) {
     return res.status(403).json({ Error: "service_id cannot be modified" });
+  }
+
+  if (bodyKeys.includes("client_id")) {
+    return res.status(403).json({ Error: "client_id cannot be modified" });
   }
 
   // 400: Check for unsupported attributes
@@ -414,9 +418,9 @@ export const replaceService = async (req, res) => {
   // 400: Check for all required fields
   const missing = requiredFields.filter((field) => !req.body[field]);
   if (missing.length > 0) {
-    return res
-      .status(400)
-      .json({ Error: `Missing required fields: ${missing.join(", ")}` });
+    return res.status(400).json({
+      Error: `The request object is missing the following required attributes: ${missing.join(", ")}`,
+    });
   }
 
   // 400: Price validation
