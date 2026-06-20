@@ -236,12 +236,12 @@ JSON
 {
     "services": [
         {
-               "id": ""efa12b1f-3bde",
-               "name": "MVIDIA Mesla A100",
-               "type": "IaaS",
-               "price": 1950.55,
-               "client": null,
-               "self": "http://<your-app>/services/"efa12b1f-3bde"
+            "id": "efa12b1f-3bde",
+            "name": "MVIDIA Mesla A100",
+            "type": "IaaS",
+            "price": 1950.55,
+            "client": null,
+            "self": "http://<your-app>/services/efa12b1f-3bde"
         },
         // ... (9 more items)
     ],
@@ -410,9 +410,11 @@ None
 
 | Name | Type | Description | Required |
 | :--- | :--- | :--- | :--- |
-| `name` | string | The name of the service. | Optional |
-| `type` | string | The name of the service type. | Optional |
-| `price` | float | The monthly cost in USD of a service. | Optional |
+| `name` | string | The name of the service. | Optional* |
+| `type` | string | The name of the service type. | Optional* |
+| `price` | float | The monthly cost in USD of a service. | Optional* |
+
+\* At least one attribute must be provided.
 
 #### Response
 
@@ -425,7 +427,7 @@ JSON
 | Outcome | Status Code | Notes |
 | :--- | :--- | :--- |
 | **Success** | `200` | OK: Response body returns updated service. The self link is set to the updated service. |
-| **Failure** | `400` | Bad Request: Request is missing all attributes, using an unsupported attribute, too many attributes, price is not a number, or using a negative value for price. |
+| **Failure** | `400` | Bad Request: Request is missing all attributes, using an unsupported attribute, price is not a number, or using a negative value for price. |
 | **Failure** | `403` | Forbidden: Client attempts to modify service_id or client. |
 | **Failure** | `404` | Not Found: No service with the given service_id exists. |
 | **Failure** | `406` | Not Acceptable: Request Accept header is not supported or is missing. |
@@ -434,7 +436,7 @@ JSON
 
 ##### Response Examples
 
-```json title="200 Created"
+```json title="200 OK"
 {
     "id": "2c53f59d-8d27",
     "name": "MVIDIA Mesla T4",
@@ -446,7 +448,7 @@ JSON
 
 ```json title="400 Bad Request"
 {
-    "Error": "The request object is missing the following required attributes: name, type, price"
+    "Error": "The request must include at least one valid attribute: name, type, price"
 }
 ```
 
@@ -501,11 +503,11 @@ JSON
 
 ---
 
-## # Delete a Service
+## Delete a Service
 
 `DELETE /services/:service_id`
 
-**Description:** Updates one or more attributes of an existing service.
+**Description:** Deletes an existing service.
 
 #### Required Permissions
 
