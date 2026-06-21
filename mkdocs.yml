@@ -58,13 +58,8 @@ nav:
       - Service Endpoints: api/services.md
       - Other Endpoints: api/other.md
   - Guides:
+      - Getting Started: guides/getting-started.md
       - Global Behaviors: guides/behaviors.md
-      - Authentication: guides/authentication.md
-  - MkDocs Examples:
-      - Admonitions: admonitions.md
-      - Code Examples: code-examples.md
-      - Content Tabs: content-tabs.md
-      - Diagram Examples: diagram-examples.md
 
 extra:
   social:
