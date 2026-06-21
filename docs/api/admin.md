@@ -56,13 +56,13 @@ JSON
 
 ```json title="201 OK - Table Created"
 {
-    "message": "ProvisionIO_Table created successfully"
+    "message": "ProvisionIO created successfully"
 }
 ```
 
 ```json title="401 Conflict - Table Already Exists"
 {
-    "message": "ProvisionIO_Table already exists"
+    "message": "ProvisionIO already exists"
 }
 ```
 
