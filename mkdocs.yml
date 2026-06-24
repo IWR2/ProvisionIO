@@ -56,7 +56,6 @@ nav:
       - Admin Endpoints: api/admin.md
       - Client Endpoints: api/clients.md
       - Service Endpoints: api/services.md
-      - Other Endpoints: api/other.md
   - Guides:
       - Getting Started: guides/getting-started.md
       - Global Behaviors: guides/behaviors.md
