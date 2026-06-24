@@ -1,5 +1,5 @@
 site_name: ProvisionIO API Documentation
-site_url: https://ProvisionIO.example
+site_url: https://iwr2.github.io/
 theme:
   name: material
   font:
