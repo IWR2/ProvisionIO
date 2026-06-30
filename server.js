@@ -17,7 +17,7 @@
 import "dotenv/config";
 import express from "express";
 import pkg from "express-openid-connect";
-import adminRoutes from "./routes/adminRoutes.js";
+// import adminRoutes from "./routes/adminRoutes.js";
 import serviceRoutes from "./routes/serviceRoutes.js";
 import usersRoutes from "./routes/usersRoutes.js";
 import clientsRoutes from "./routes/clientRoutes.js";
@@ -170,14 +170,14 @@ app.get(
 /**
  * Table creation and deletion.
  */
-app.use(
-  "/init",
-  checkJwt,
-  claimIncludes("permissions", "admin:access"),
-  claimIncludes("permissions", "admin:table_create"),
-  claimIncludes("permissions", "admin:table_delete"),
-  adminRoutes,
-);
+//app.use(
+//  "/init",
+//  checkJwt,
+//  claimIncludes("permissions", "admin:access"),
+//  claimIncludes("permissions", "admin:table_create"),
+//  claimIncludes("permissions", "admin:table_delete"),
+//  adminRoutes,
+//);
 
 /**
  * Retrieves all registered users.
