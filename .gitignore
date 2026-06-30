@@ -49,6 +49,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.env.backup
 
 # mkdocs documentation
 /site
