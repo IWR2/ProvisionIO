@@ -18,17 +18,13 @@ import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
  *
  * Configuration comes from environment variables (.env file).
  *
- * For local development: Uses endpoint http://localhost:8000 with dummy credentials.
+ * For local development: Uses endpoint DYNAMODB_ENDPOINT your .env file.
  *
  * @type {DynamoDBClient}
  */
 const client = new DynamoDBClient({
   endpoint: process.env.DYNAMODB_ENDPOINT,
   region: process.env.AWS_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  },
 });
 
 /**
