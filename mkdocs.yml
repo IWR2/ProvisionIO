@@ -59,6 +59,7 @@ nav:
   - Guides:
       - Getting Started: guides/getting-started.md
       - Global Behaviors: guides/behaviors.md
+      - Deployment Guide: guides/deployment.md
 
 extra:
   social:
