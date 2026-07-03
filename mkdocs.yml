@@ -53,12 +53,12 @@ nav:
   - Data Model: model.md
   - API Reference:
       - API Directory: api/endpoints.md
+      - Global Behaviors: api/behaviors.md
       - Admin Endpoints: api/admin.md
       - Client Endpoints: api/clients.md
       - Service Endpoints: api/services.md
   - Guides:
       - Getting Started: guides/getting-started.md
-      - Global Behaviors: guides/behaviors.md
       - Deployment Guide: guides/deployment.md
 
 extra:
