@@ -435,9 +435,10 @@ exit
 2. Navigate to **Applications → Applications → Your Web Application**.
 3. Under **Application URIs**, remove:
 
-| Setting | Value |
-|---------|-------|
-| **Allowed Callback URLs** | `http://YOUR_EC2_IP:3000/callback` |
-| **Allowed Logout URLs** | `http://YOUR_EC2_IP:3000` |
+    | Setting | Value |
+    |---------|-------|
+    | **Allowed Callback URLs** | `http://YOUR_EC2_IP:3000/callback` |
+    | **Allowed Logout URLs** | `http://YOUR_EC2_IP:3000` |
 
 4. Click **Save**.
+
