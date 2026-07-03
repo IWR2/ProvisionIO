@@ -242,9 +242,11 @@ To paste in the terminal:
 3. Under **Application URIs**, add:
 
 | Setting | Value |
-|------|------|
-| Allowed Callback URLs | `http://YOUR_EC2_IP:3000/callback` |
-| Allowed Logout URLs | `http://YOUR_EC2_IP:3000` |
+|---------|-------|
+| **Allowed Callback URLs** | `http://YOUR_EC2_IP:3000/callback` |
+| **Allowed Logout URLs** | `http://YOUR_EC2_IP:3000` |
+
+4. Click **Save**.
 
 ---
 
@@ -325,7 +327,7 @@ Your Postman environment requires:
     * Click on the **Roles** Tab.
     * Assign the **Admin** role (as configured in Step 7.3 of the Getting Started guide).
 
-5. Logout and repeat the sign-up process for three regular users:
+5. Log out and repeat the sign-up process for three regular users:
     * User 1: `user1@yourdomain.com`
     * User 2: `user2@yourdomain.com`
     * User 3: `user3@yourdomain.com`
@@ -363,9 +365,10 @@ Repeat the process for each of the three regular users:
 #### Step 5: Update Base URL
 
 In your Postman environment, set the `base_url` variable:
-    ```text
-    base_url = http://YOUR_EC2_IP:3000
-    ```
+
+```text
+base_url = http://YOUR_EC2_IP:3000
+```
 
 #### Step 6: Verify All Variables
 
@@ -375,7 +378,7 @@ Ensure all variables are populated in your Postman environment:
 |------|------|------|
 | `base_url` | Your EC2 API URL | `http://54.123.45.67:3000` |
 | `admin_access_token` | Admin user JWT | `eyJhbG...` |
-| `user1_access_token` | First regular user JWT| `eyJhbG...` |
+| `user1_access_token` | First regular user JWT | `eyJhbG...` |
 | `user2_access_token` | Second regular user JWT | `eyJhbG...` |
 | `user3_access_token` | Third regular user JWT | `eyJhbG...` |
 
@@ -387,4 +390,54 @@ Ensure all variables are populated in your Postman environment:
 
 ## 4. Cleanup
 
-TODO
+!!! danger "Cleanup Required"
+    To avoid ongoing AWS charges, delete all resources immediately after testing.
+
+### 4.1 Stop and Remove PM2 Process
+
+```bash
+# Stop the PM2 process
+pm2 stop provisionio-api
+
+# Remove from PM2 list
+pm2 delete provisionio-api
+
+# Remove PM2 startup script (optional)
+pm2 unstartup
+
+# Exit EC2 (if using SSH)
+exit
+```
+
+### 4.2 Terminate EC2 Instance
+
+1. Navigate to **AWS Console → EC2 → Instances**.
+2. Select your instance (`provisionio-api`).
+3. Click **Instance State → Terminate**.
+4. Confirm termination.
+
+!!! tip "Verify Termination"
+    The instance status will change from running to shutting-down to terminated. This takes about 1-2 minutes.
+
+### 4.3 Delete DynamoDB Table
+
+1. Navigate to **AWS Console → DynamoDB → Tables**.
+2. Select the `ProvisionIO` table.
+3. Click **Delete table**.
+4. Confirm deletion.
+
+!!! warning "Data Loss"
+    Deleting the DynamoDB table permanently removes all data. This action cannot be undone.
+
+### 4.4 Remove Auth0 URLs (Optional)
+
+1. Log in to the [Auth0 Dashboard](https://manage.auth0.com/dashboard).
+2. Navigate to **Applications → Applications → Your Web Application**.
+3. Under **Application URIs**, remove:
+
+| Setting | Value |
+|---------|-------|
+| **Allowed Callback URLs** | `http://YOUR_EC2_IP:3000/callback` |
+| **Allowed Logout URLs** | `http://YOUR_EC2_IP:3000` |
+
+4. Click **Save**.
