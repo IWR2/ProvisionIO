@@ -201,7 +201,6 @@ vim .env
 ```env
 # Server Configuration
 PORT=3000
-NODE_ENV=development
 
 # DynamoDB Local Configuration
 DYNAMODB_ENDPOINT=https://dynamodb.us-east-1.amazonaws.com
