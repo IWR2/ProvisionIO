@@ -3,7 +3,6 @@
 ![Docs](https://img.shields.io/badge/docs-mkdocs-4051B5.svg)
 ![Node](https://img.shields.io/badge/node.js-18.x-339933.svg)
 ![AWS](https://img.shields.io/badge/AWS-DynamoDB-FF9900.svg)
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
 The documentation is built using [MkDocs](https://www.mkdocs.org/).
 
