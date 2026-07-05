@@ -76,9 +76,9 @@ For detailed Auth0 configuration, local configuration, testing steps, and AWS De
 - **Docs**: Python 3.10+, pip.
 
 ## Change Log
-| Version | Change | Date |
+| Version | Date | Description  |
 | :--- | :--- | :--- |
-| 2.2 | Production Ready: AWS EC2 + DynamoDB (Cloud) | June 29, 2026 |
-| 2.1 | Infrastructure: Completed AWS EC2 deployment automation | June 19, 2026 |
-| 2.0 | Core Refactor: Migration to Node.js/Express + local DynamoDB | May 31, 2026 |
-| 1.0 | Legacy: Initial version (GCP App Engine + Datastore) | June 1, 2022 |
+| 2.2 |  June 29, 2026 | Production Ready: AWS EC2 + DynamoDB (Cloud) |
+| 2.1 | June 19, 2026 | Infrastructure: Completed AWS EC2 deployment automation |
+| 2.0 | May 31, 2026 | Core Refactor: Migration to Node.js/Express + local DynamoDB |
+| 1.0 | June 1, 2022 | Legacy: Initial version (GCP App Engine + Datastore) | June 1, 2022 |

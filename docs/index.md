@@ -17,9 +17,10 @@ The ProvisionIO API allows authenticated users to:
 
 | Version | Date | Description |
 | :--- | :--- | :--- |
-| **2.0** | June 17, 2026 | Migration from Google Datastore to local AWS DynamoDB; updated routing. |
-| **1.1** | June 1, 2022 | Initial deployment to Google App Engine. |
-| **1.0** | May 16, 2022 | Initial local development completion. |
+| **2.2** | June 29, 2026 | Production Ready: AWS EC2 + DynamoDB (Cloud) |
+| **2.1** | June 19, 2026 | Infrastructure: Completed AWS EC2 deployment automation |
+| **2.0** | May 31, 2026 | Core Refactor: Migration to Node.js/Express + local DynamoDB |
+| **1.0** | June 1, 2022 | Legacy: Initial version (GCP App Engine + Datastore) |
 
 ---
 
