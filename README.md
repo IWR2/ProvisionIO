@@ -6,7 +6,7 @@
 
 The documentation is built using [MkDocs](https://www.mkdocs.org/).
 
-A serverless REST API for IaaS management, migrated from Google Datastore to **AWS DynamoDB**.
+A modernized IaaS management system, refactored from a legacy GCP Datastore implementation to a serverless **AWS DynamoDB** architecture.
 
 ---
 
