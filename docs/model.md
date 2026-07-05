@@ -13,7 +13,7 @@ All entities reside in a single table, differentiated by `EntityType` and `Entit
 * **Statistics:** Atomic tracking (`CLIENT_COUNT` and `SERVICE_COUNT`) via transactions ensures data consistency during creation and deletion.
 
 ## Indexing Strategy
-To support efficient lookups, the table is configured with three Global Secondary Indexes (GSIs). These indexes are critical for mapping your business relationships:
+Three Global Secondary Indexes (GSIs) are configured to support application queries:
 
 | Index Name | Partition Key | Sort Key | Purpose |
 | :--- | :--- | :--- | :--- |
