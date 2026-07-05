@@ -5,9 +5,12 @@ The ProvisionIO API utilizes a high-performance **Single-Table Design** in AWS D
 ## Storage Strategy
 All entities reside in a single table, differentiated by `EntityType` and `EntityId` attributes.
 
-* **Clients:** `EntityType`: `CLIENT` | `EntityId` prefix: `CLIENT#`
-* **Services:** `EntityType`: `SERVICE` | `EntityId` prefix: `SERVICE#`
-* **Statistics:** Atomic tracking (`CLIENT_COUNT` and `SERVICE_COUNT`) via transactions to ensure data consistency during creation and deletion.
+* **Partition Key**: `EntityId` (String)
+* **Sort Key**: `EntityType` (String)
+* **Prefixes**:
+    * **Clients**: `Client#`
+    * **Services**: `Service#`
+* **Statistics:** Atomic tracking (`CLIENT_COUNT` and `SERVICE_COUNT`) via transactions ensures data consistency during creation and deletion.
 
 ## Indexing Strategy
 To support efficient lookups, the table is configured with three Global Secondary Indexes (GSIs). These indexes are critical for mapping your business relationships:
