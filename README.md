@@ -44,24 +44,24 @@ python -m pip install mkdocs mkdocs-material
 mkdocs serve
 ```
 
-For detailed Auth0 configuration, local configuration, testing steps, and AWS Deployment please refer to the [Getting Started Guide](docs/guides/getting-started.md).
+For detailed Auth0 configuration, local configuration, testing steps, and AWS Deployment please refer to the [Getting Started Guide](https://iwr2.github.io/ProvisionIO/guides/getting-started/).
 
 ## Documentation
 **[View the Full Documentation](https://iwr2.github.io/ProvisionIO/)**
 
 ### Guides
-* **[Getting Started](docs/guides/getting-started.md):** Local development environment setup.
-* **[Deployment Guide](docs/guides/deployment.md):** AWS EC2 production blueprint.
+* **[Getting Started](https://iwr2.github.io/ProvisionIO/guides/getting-started/):** Local development environment setup.
+* **[Deployment Guide](https://iwr2.github.io/ProvisionIO/guides/deployment/):** AWS EC2 production blueprint.
 
 ### Data Model
-* **[Overview](docs/model.md):** Single-Table Design optimization strategy.
+* **[Overview](https://iwr2.github.io/ProvisionIO/model/):** DynamoDB single-table design, indexing strategies, and relationship management.
 
 ### API Reference
-* **[API Directory](docs/api/endpoints.md):** High-level summary of all endpoints.
-* **[Global Behaviors](docs/api/behaviors.md):** Authentication and common API patterns.
-* **[Admin Endpoints](docs/api/admin.md):** Administrative operations.
-* **[Client Endpoints](docs/api/clients.md):** Client management.
-* **[Service Endpoints](docs/api/services.md):** Service management.
+* **[API Directory](https://iwr2.github.io/ProvisionIO/api/endpoints/):** High-level summary of all endpoints.
+* **[Global Behaviors](https://iwr2.github.io/ProvisionIO/api/behaviors/):** Standardized HTTP responses, request headers, and authentication requirements.
+* **[Admin Endpoints](https://iwr2.github.io/ProvisionIO/api/admin/):** Privileged system operations, user auditing, and authentication diagnostics.
+* **[Client Endpoints](https://iwr2.github.io/ProvisionIO/api/clients/):** Ownership-based management, service assignments, and secure resource access control.
+* **[Service Endpoints](https://iwr2.github.io/ProvisionIO/api/services/):** Cloud service definitions, pagination support, and lifecycle updates.
 
 
 ## Tech Stack
