@@ -16,9 +16,9 @@ This guide walks you through setting up the ProvisionIO API locally for developm
 
 Want to jump straight to testing? Use these pre-configured files:
 
-* [**AWS Production Collection**](https://raw.githubusercontent.com/iwr2/ProvisionIO/main/postman/aws_collection.json)
-* [**Local Development Collection**](https://raw.githubusercontent.com/iwr2/ProvisionIO/main/postman/local_collection.json)
-* [**Environment Configuration**](https://raw.githubusercontent.com/iwr2/ProvisionIO/main/postman/environment.json)
+* [**AWS Production Collection**](https://raw.githubusercontent.com/IWR2/ProvisionIO/refs/heads/main/provisionio-aws-collection.postman_collection.json)
+* [**Local Development Collection**](https://raw.githubusercontent.com/IWR2/ProvisionIO/refs/heads/main/provisionio-local-collection.postman_collection.json)
+* [**Environment Configuration**](https://raw.githubusercontent.com/IWR2/ProvisionIO/refs/heads/main/provisionio-environment.postman_environment.json)
 
 ---
 
