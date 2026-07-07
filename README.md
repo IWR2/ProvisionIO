@@ -6,7 +6,7 @@
 
 The documentation is built using [MkDocs](https://www.mkdocs.org/).
 
-A modernized IaaS management system, refactored from a legacy GCP Datastore implementation to a serverless **AWS DynamoDB** architecture.
+A modernized management system, refactored from a GCP Datastore implementation to a Node.js API hosted on AWS EC2, utilizing a serverless DynamoDB backend.
 
 ---
 
@@ -81,4 +81,4 @@ For detailed Auth0 configuration, local configuration, testing steps, and AWS De
 | 2.2 |  June 29, 2026 | Production Ready: AWS EC2 + DynamoDB (Cloud) |
 | 2.1 | June 19, 2026 | Infrastructure: Completed AWS EC2 deployment automation |
 | 2.0 | May 31, 2026 | Core Refactor: Migration to Node.js/Express + local DynamoDB |
-| 1.0 | June 1, 2022 | Legacy: Initial version (GCP App Engine + Datastore) | June 1, 2022 |
+| 1.0 | June 1, 2022 | Initial: GCP version (GCP App Engine + Datastore) | June 1, 2022 |
