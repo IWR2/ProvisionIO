@@ -1,10 +1,10 @@
 {
   "info": {
-    "_postman_id": "e2655921-dcba-4425-8310-59a1d8f249c7",
-    "name": "Provision IO Tests Deployed AWS",
+    "_postman_id": "0d77806a-1108-4325-9d97-e99bec7e9da7",
+    "name": "provisionio-local-collection",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "19176292",
-    "_collection_link": "https://go.postman.co/collection/19176292-e2655921-dcba-4425-8310-59a1d8f249c7?source=collection_link"
+    "_collection_link": "https://go.postman.co/collection/19176292-0d77806a-1108-4325-9d97-e99bec7e9da7?source=collection_link"
   },
   "item": [
     {
@@ -36,12 +36,112 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/debug-scopes",
+          "raw": "http://localhost:3000/debug-scopes",
+          "protocol": "http",
           "host": [
-            "{{base_url}}"
+            "localhost"
           ],
+          "port": "3000",
           "path": [
             "debug-scopes"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "DELETE /init - 404 Delete Table Does not Exist",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// DELETE /init - 404 Table does not exist\r",
+              "pm.test(\"404 Table does not exist\", () => {\r",
+              "    pm.response.to.have.status(404);\r",
+              "});\r",
+              "\r",
+              "pm.test(\"404 error message\", () => {\r",
+              "     pm.expect(pm.response.json()[\"message\"]).to.eq(\"Table does not exist\");\r",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{admin_access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/init",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "init"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "POST /init - 201 Create Table",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// init /init - 201 Table Created\r",
+              "pm.test(\"201 ProvisionIO Table Created\", () => {\r",
+              "    pm.response.to.have.status(201);\r",
+              "});\r",
+              "\r",
+              "pm.test(\"201 Success message\", () => {\r",
+              "     pm.expect(pm.response.json()[\"message\"]).to.eq(\"ProvisionIO created successfully\");\r",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{admin_access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/init",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "init"
           ]
         }
       },
@@ -15971,6 +16071,51 @@
           ],
           "path": [
             "protected"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "DELETE /init - 204 Delete Table",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// DELETE /init - 204 Table Deleted\r",
+              "pm.test(\"204 Table Deleted\", () => {\r",
+              "    pm.response.to.have.status(204);\r",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{admin_access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/init",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "init"
           ]
         }
       },
