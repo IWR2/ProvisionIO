@@ -209,9 +209,9 @@ export const deleteClientAndCleanup = async (user_id, client_id, services) => {
       Update: {
         TableName: TABLE_NAME,
         Key: { EntityId: `USER#${user_id}`, EntityType: "CLIENT_COUNT" },
-        UpdateExpression: "SET #c = #c - :dec",
+        UpdateExpression: "ADD #c :dec",
         ExpressionAttributeNames: { "#c": "count" },
-        ExpressionAttributeValues: { ":dec": 1 },
+        ExpressionAttributeValues: { ":dec": -1 },
       },
     },
   ];
