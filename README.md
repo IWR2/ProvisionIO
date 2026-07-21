@@ -38,7 +38,7 @@ npm run dev
 
 ### Serve Documentation Locally
 ```bash
-python -m venv venv  
+python -m venv venv
 venv\scripts\activate
 python -m pip install mkdocs mkdocs-material
 mkdocs serve
